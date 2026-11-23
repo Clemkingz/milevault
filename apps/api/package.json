@@ -1,0 +1,32 @@
+{
+  "name": "@milevault/api",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "MileVault backend: off-chain metadata, Soroban event indexer, REST API",
+  "scripts": {
+    "dev": "tsx watch --env-file-if-exists=.env src/index.ts",
+    "build": "tsc --noEmit",
+    "start": "tsx --env-file-if-exists=.env src/index.ts",
+    "typecheck": "tsc --noEmit",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:studio": "drizzle-kit studio"
+  },
+  "dependencies": {
+    "@hono/node-server": "^2.1.11",
+    "@milevault/shared": "workspace:*",
+    "@stellar/stellar-sdk": "^17.4.0",
+    "drizzle-orm": "^0.45.4",
+    "hono": "^4.13.18",
+    "postgres": "^4.1.1",
+    "tsx": "^4.23.15",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@milevault/tsconfig": "workspace:*",
+    "@types/node": "^24.0.0",
+    "drizzle-kit": "^0.31.11",
+    "typescript": "^5.9.3"
+  }
+}

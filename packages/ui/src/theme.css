@@ -1,0 +1,72 @@
+/*
+ * MileVault design tokens (Tailwind v4 @theme)
+ * Source: MileVault client & contributor journey prototypes (design guide).
+ * Components reference only these semantic names — restyle here, not in components.
+ */
+@theme {
+  /* Typography — app UI uses Open Runde, marketing pages use Inter */
+  --font-sans: var(--font-open-runde), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-inter: var(--font-inter-face), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-mono: ui-monospace, Menlo, monospace;
+
+  /* Primary (sky) */
+  --color-pri: #2ebef2;
+  --color-pri-hover: #1fafe3;
+  --color-pri-text: #1a9acb;
+  --color-tint: #eaf8fe;
+  --color-tint-hover: #dcf3fd;
+
+  /* Neutrals */
+  --color-ink: #171717;
+  --color-sub: #7b7b7b;
+  --color-soft: #a3a3a3;
+  --color-line: rgb(0 0 0 / 0.05);
+  --color-line-2: rgb(0 0 0 / 0.1);
+  --color-gray: #f5f5f5;
+  --color-seg: #d9d9d9;
+  --color-page: #fdfdfc;
+  --color-surface: #ffffff;
+
+  /* Status */
+  --color-green: #00ce5c;
+  --color-green-text: #00a84b;
+  --color-green-bg: #ebfef3;
+  --color-amber: #f0af30;
+  --color-amber-bg: #fefce6;
+  --color-blue: #4797f6;
+  --color-blue-bg: #ecf4fe;
+  --color-red: #fe393b;
+  --color-red-bg: #fff0f0;
+  --color-purple: #b36bf2;
+  --color-purple-bg: #faf3fe;
+
+  /* Radius */
+  --radius-card: 16px;
+  --radius-sub-card: 12px;
+  --radius-input: 12px;
+  --radius-dialog: 20px;
+  --radius-landing-card: 24px;
+
+  /* Shadows */
+  --shadow-ring: inset 0 0 0 1px rgb(0 0 0 / 0.05);
+  --shadow-ring-2: inset 0 0 0 1px rgb(0 0 0 / 0.1);
+  --shadow-focus: inset 0 0 0 1px #2ebef2, 0 0 0 3px rgb(46 190 242 / 0.16);
+  --shadow-hover: 0 4px 14px -6px rgb(0 0 0 / 0.12);
+  --shadow-menu: 0 16px 32px -12px rgb(14 18 27 / 0.18), 0 0 0 1px rgb(0 0 0 / 0.05);
+  --shadow-dialog: 0 16px 28px -8px rgb(0 0 0 / 0.1);
+
+  /* Layout */
+  --width-sidebar: 240px;
+  --width-content: 700px;
+  --width-landing: 1200px;
+}
+
+@layer base {
+  body {
+    font-size: 14px;
+    line-height: 20px;
+    letter-spacing: -0.005em;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}

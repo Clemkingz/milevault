@@ -1,0 +1,114 @@
+/*
+ * MileVault motion — calm, money-safe feedback. Durations stay short; nothing loops
+ * except "waiting" states (spinners, shimmer, the escrow pulse while a tx confirms).
+ */
+@keyframes mv-rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes mv-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes mv-shimmer { 0% { background-position: -320px 0; } 100% { background-position: 320px 0; } }
+@keyframes mv-pop-in { 0% { transform: scale(.92); opacity: 0; } 60% { transform: scale(1.03); opacity: 1; } 100% { transform: none; } }
+@keyframes mv-fill { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes mv-ring { from { stroke-dasharray: 0 43; } }
+@keyframes mv-toast-out { to { opacity: 0; transform: translate(-50%, 8px); } }
+@keyframes mv-burst { 0% { transform: translate(0, 0) scale(.6); opacity: 0; } 15% { opacity: 1; } 100% { transform: translate(var(--dx), var(--dy)) scale(1); opacity: 0; } }
+@keyframes mv-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+@keyframes mv-lock { 0% { box-shadow: 0 0 0 0 rgb(46 190 242 / .35); } 100% { box-shadow: 0 0 0 10px rgb(46 190 242 / 0); } }
+@keyframes mv-dots { 0%, 80%, 100% { opacity: .25; } 40% { opacity: 1; } }
+
+/* Page content rises in, children staggered */
+.mv-page > * { animation: mv-rise .38s var(--ease-out, ease) both; }
+.mv-page > *:nth-child(2) { animation-delay: .03s; }
+.mv-page > *:nth-child(3) { animation-delay: .06s; }
+.mv-page > *:nth-child(4) { animation-delay: .09s; }
+.mv-page > *:nth-child(5) { animation-delay: .12s; }
+.mv-page > *:nth-child(6) { animation-delay: .15s; }
+.mv-page > *:nth-child(7) { animation-delay: .18s; }
+.mv-page > *:nth-child(n+8) { animation-delay: .21s; }
+
+/* Rows/cards in a list cascade */
+.mv-list > * { animation: mv-rise .32s var(--ease-out, ease) both; }
+.mv-list > *:nth-child(2) { animation-delay: .04s; }
+.mv-list > *:nth-child(3) { animation-delay: .08s; }
+.mv-list > *:nth-child(4) { animation-delay: .12s; }
+.mv-list > *:nth-child(n+5) { animation-delay: .16s; }
+
+/* Skeletons */
+.sk { background: linear-gradient(90deg, #F1F1F0 0, #F8F8F7 40%, #F1F1F0 80%) #F1F1F0; background-size: 640px 100%; animation: mv-shimmer 1.3s linear infinite; border-radius: 8px; }
+.sk.round { border-radius: 999px; }
+
+/* Progress segments fill left→right when they change colour */
+.prog i { transform-origin: left center; transition: background-color .4s ease; }
+.prog i.g, .prog i.b, .prog i.y { animation: mv-fill .5s var(--ease-out, ease) both; }
+.ring-arc { animation: mv-ring .8s var(--ease-out, ease) both; transition: stroke-dasharray .6s ease; }
+
+/* State changes */
+.badge { animation: mv-pop-in .28s ease both; }
+.row.fresh { animation: hl 1.8s ease 1; }
+.card.next { animation: mv-rise .35s var(--ease-out, ease) both; }
+.toast.out { animation: mv-toast-out .2s ease forwards; }
+.ovl.closing { animation: mv-fade .15s ease reverse forwards; }
+.funded-pulse { animation: mv-lock 1.2s ease-out 2; border-radius: 999px; }
+
+/* Waiting for the network: hero balloon gently floats */
+.dlg.waiting .hmedia .hil { animation: mv-float 2.4s ease-in-out infinite; }
+.dots i { display: inline-block; animation: mv-dots 1.2s infinite; font-style: normal; }
+.dots i:nth-child(2) { animation-delay: .15s; }
+.dots i:nth-child(3) { animation-delay: .3s; }
+
+/* Payout celebration: coins burst out of the illustration */
+.burst { position: absolute; left: 50%; top: 96px; width: 0; height: 0; pointer-events: none; z-index: 2; }
+.burst i { position: absolute; width: 8px; height: 8px; border-radius: 999px; animation: mv-burst 1.1s cubic-bezier(.2,.7,.3,1) both; }
+.burst i:nth-child(odd) { width: 6px; height: 6px; border-radius: 2px; }
+
+/* Button press + loading */
+.btn.is-loading { cursor: progress; opacity: 1 !important; }
+.btn.is-loading > span { opacity: .85; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; scroll-behavior: auto !important; }
+  .sk { animation: none; }
+}
+
+/* ---------- Scroll reveal (progressive) ---------- */
+.reveal { transition: opacity .6s ease, transform .6s var(--ease-out, ease); }
+.reveal.pending { opacity: 0; transform: translateY(18px); }
+.reveal-stagger.pending > * { opacity: 0; transform: translateY(14px); }
+.reveal-stagger.revealed > * { animation: mv-rise .55s var(--ease-out, ease) both; }
+.reveal-stagger.revealed > *:nth-child(2) { animation-delay: .07s; }
+.reveal-stagger.revealed > *:nth-child(3) { animation-delay: .14s; }
+.reveal-stagger.revealed > *:nth-child(4) { animation-delay: .21s; }
+.reveal-stagger.revealed > *:nth-child(n+5) { animation-delay: .28s; }
+.reveal.dash-2 { display: flex; }
+@media (min-width: 1600px) { .reveal.dash-2 { display: grid; } }
+
+/* Sticky headers gain a hairline + shadow once the page scrolls */
+.mtop, .lnav { transition: box-shadow .2s ease, background .2s ease; }
+.mtop.scrolled, .lnav.scrolled { box-shadow: 0 1px 0 var(--line), 0 8px 24px -16px rgb(14 18 27 / .25); }
+
+/* Scroll-driven product preview on the landing (Chromium; static elsewhere) */
+@supports (animation-timeline: view()) {
+  @keyframes mv-tilt-in { from { transform: perspective(1400px) rotateX(14deg) scale(.94); opacity: .6; } to { transform: none; opacity: 1; } }
+  .pframe.scroll-tilt { animation: mv-tilt-in linear both; animation-timeline: view(); animation-range: entry 0% cover 45%; }
+  @keyframes mv-parallax { from { transform: translateY(24px); } to { transform: translateY(-24px); } }
+  .parallax { animation: mv-parallax linear both; animation-timeline: view(); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .reveal.pending, .reveal-stagger.pending > * { opacity: 1; transform: none; }
+  .pframe.scroll-tilt, .parallax { animation: none; }
+}
+
+/* ---------- Branded loader ---------- */
+.vloader { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; padding: 72px 16px; min-height: 50dvh; }
+.vloader.fs { min-height: 100dvh; padding: 24px; background: var(--page); }
+.vl-mark { position: relative; width: 72px; height: 72px; display: flex; align-items: center; justify-content: center; }
+.vl-ring { position: absolute; inset: 0; transform: rotate(-90deg); }
+.vl-track { fill: none; stroke: var(--tint); stroke-width: 3; }
+.vl-arc { fill: none; stroke: var(--pri); stroke-width: 3; stroke-linecap: round; stroke-dasharray: 182; animation: vl-draw 1.6s cubic-bezier(.6,.1,.3,1) infinite; transform-origin: center; }
+@keyframes vl-draw { 0% { stroke-dashoffset: 182; } 55% { stroke-dashoffset: 30; } 100% { stroke-dashoffset: -150; } }
+.vl-tile { width: 48px; height: 48px; border-radius: 14px; background: var(--pri); color: #fff; display: flex; align-items: center; justify-content: center; box-shadow: 0 10px 24px -10px rgb(46 190 242 / .8); animation: vl-breathe 1.6s ease-in-out infinite; }
+@keyframes vl-breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(.94); } }
+.vl-line { color: var(--sub); font-size: 14px; animation: mv-rise .35s ease both; }
+
+/* Loading buttons: spinner + sheen on primary */
+@keyframes mv-btn-sheen { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+.btn.pri.is-loading, .btn.danger.is-loading { background-image: linear-gradient(110deg, transparent 30%, rgb(255 255 255 / .28) 50%, transparent 70%); background-size: 200% 100%; animation: mv-btn-sheen 1.3s linear infinite; }
+.btn.is-loading .spin { animation-duration: .7s; }

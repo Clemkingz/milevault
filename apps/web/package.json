@@ -1,0 +1,28 @@
+{
+  "name": "@milevault/web",
+  "version": "0.0.0",
+  "private": true,
+  "description": "MileVault landing site (serves / and proxies /app to the dashboard zone)",
+  "scripts": {
+    "dev": "next dev --port 3000",
+    "build": "next build",
+    "start": "next start --port 3000",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@milevault/shared": "workspace:*",
+    "@milevault/ui": "workspace:*",
+    "next": "^16.4.6",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
+  },
+  "devDependencies": {
+    "@milevault/tsconfig": "workspace:*",
+    "@tailwindcss/postcss": "^4.3.5",
+    "@types/node": "^24.0.0",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "tailwindcss": "^4.3.5",
+    "typescript": "^5.9.3"
+  }
+}

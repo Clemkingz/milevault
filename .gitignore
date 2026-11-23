@@ -1,0 +1,37 @@
+# dependencies
+node_modules/
+.pnpm-store/
+
+# builds
+.next/
+out/
+dist/
+build/
+*.tsbuildinfo
+next-env.d.ts
+
+# rust / soroban
+contracts/target/
+contracts/**/test_snapshots/
+.stellar/
+
+# env & secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# deploy / tooling
+.vercel
+.turbo
+coverage/
+
+# editors / OS
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.log
+npm-debug.log*
+pnpm-debug.log*

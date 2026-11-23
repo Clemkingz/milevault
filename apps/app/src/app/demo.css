@@ -1,0 +1,30 @@
+/* Demo controls (mock mode) — styled after the prototype's side panel */
+.demo { position: fixed; right: 16px; bottom: 16px; z-index: 60; font-family: var(--app); }
+@media (max-width: 1023.98px) { .demo { right: 12px; bottom: calc(88px + env(safe-area-inset-bottom)); } }
+.demo-pill { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border-radius: 999px; background: var(--ink); color: #fff; font-weight: 500; font-size: 13px; box-shadow: 0 8px 24px -8px rgb(0 0 0 / .35); position: relative; animation: mv-rise .3s ease both; }
+.demo-pill svg { color: var(--pri); }
+.demo-dot { position: absolute; top: -2px; right: -2px; width: 10px; height: 10px; border-radius: 999px; background: var(--pri); box-shadow: 0 0 0 2px #fff; animation: pulse 2s ease-in-out infinite; }
+.demo-card { width: min(300px, calc(100vw - 24px)); max-height: calc(100dvh - 120px); overflow: auto; background: #fff; border-radius: 20px; padding: 16px; box-shadow: 0 1px 2px rgba(0,0,0,.04), 0 18px 40px -12px rgba(14,18,27,.28), 0 0 0 1px var(--line); animation: pop .22s var(--ease-out) both; }
+.demo-h { display: flex; align-items: center; gap: 8px; }
+.demo-h b { font-weight: 500; font-size: 15px; flex: 1; }
+.demo-h .mk { width: 24px; height: 24px; border-radius: 7px; background: var(--pri); color: #fff; display: flex; align-items: center; justify-content: center; }
+.demo-h .xs { width: 28px; height: 28px; border-radius: 999px; background: var(--gray); display: flex; align-items: center; justify-content: center; }
+.demo .lead { color: var(--sub); font-size: 12px; line-height: 16px; margin-top: 6px; }
+.demo .dl-lbl { display: block; font-size: 12px; line-height: 16px; font-weight: 500; color: var(--soft); margin: 16px 0 8px; }
+.demo .seg { display: flex; background: var(--gray); border-radius: 999px; padding: 2px; gap: 2px; }
+.demo .seg button { flex: 1; height: 30px; border-radius: 999px; color: var(--sub); font-weight: 500; font-size: 12px; display: flex; align-items: center; justify-content: center; white-space: nowrap; }
+.demo .seg button.on { background: #fff; color: var(--ink); box-shadow: 0 1px 2px rgba(0,0,0,.06); }
+.demo .simbtn { width: 100%; display: flex; gap: 10px; align-items: center; padding: 10px 12px; border-radius: 14px; background: var(--ink); color: #fff; text-align: left; font-size: 13px; line-height: 18px; animation: pulse 2s ease-in-out infinite; }
+.demo .simbtn b { font-weight: 500; display: block; }
+.demo .simbtn small { display: block; color: rgba(255,255,255,.6); font-size: 11px; line-height: 14px; }
+.demo .simbtn .av { border: 1.5px solid rgba(255,255,255,.7); }
+.demo .note { font-size: 12px; line-height: 16px; color: var(--sub); background: var(--gray); border-radius: 12px; padding: 10px 12px; display: flex; gap: 8px; }
+.demo .note svg { color: var(--soft); flex: none; }
+.demo .tg { display: flex; align-items: center; gap: 8px; padding: 6px 0; font-size: 13px; color: var(--ink); cursor: pointer; }
+.demo .tg input[type=checkbox] { width: 16px; height: 16px; accent-color: var(--pri); }
+.demo .tg.sel { justify-content: space-between; }
+.demo .tg select { border: 0; background: var(--gray); border-radius: 8px; padding: 4px 8px; font: inherit; font-size: 12px; }
+@media (max-width: 400px) {
+  .demo-pill { width: 36px; height: 36px; padding: 0; justify-content: center; font-size: 0; gap: 0; }
+  .demo-pill svg { width: 16px; height: 16px; }
+}

@@ -1,0 +1,13 @@
+@import "tailwindcss";
+@import "@milevault/ui/theme.css";
+@import "@milevault/ui/prototype.css";
+@import "@milevault/ui/overrides.css";
+@import "@milevault/ui/motion.css";
+@import "@milevault/ui/layout.css";
+@import "./demo.css";
+
+@source "../../../../packages/ui/src";
+
+.skip { position: absolute; left: -9999px; top: 8px; z-index: 100; background: var(--ink); color: #fff; padding: 8px 12px; border-radius: 999px; }
+.skip:focus { left: 12px; }
+.gate-btn { padding: 0 16px; }

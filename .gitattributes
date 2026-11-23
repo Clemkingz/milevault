@@ -1,0 +1,10 @@
+* text=auto eol=lf
+*.woff2 binary
+*.webp binary
+*.png binary
+*.jpg binary
+*.wasm binary
+pnpm-lock.yaml linguist-generated=true -diff
+docs/design/prototype/*.html linguist-vendored=true -diff
+docs/design/prototype/*.js linguist-vendored=true
+docs/design/prototype/*.css linguist-vendored=true
