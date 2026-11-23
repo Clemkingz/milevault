@@ -12,10 +12,6 @@
     "dev:app": "pnpm --filter @milevault/app dev",
     "build": "pnpm -r build",
     "typecheck": "pnpm -r typecheck",
-    "contract:build": "cd contracts && stellar contract build",
-    "contract:test": "cd contracts && cargo test",
-    "contract:deploy": "bash scripts/deploy-testnet.sh",
-    "contract:bindings": "bash scripts/generate-bindings.sh",
     "dev:admin": "pnpm --filter @milevault/admin dev"
   },
   "devDependencies": {

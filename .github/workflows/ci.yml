@@ -25,18 +25,3 @@ jobs:
       - name: Build all apps (web, app, admin)
         run: pnpm build
 
-  contract:
-    name: Soroban contract tests
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: contracts
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: wasm32v1-none
-      - uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: contracts
-      - run: cargo test

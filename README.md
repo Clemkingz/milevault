@@ -4,7 +4,8 @@ Milestone-based escrow payments on Stellar (Soroban). Clients lock testnet USDC 
 and contributors are paid milestone by milestone as the client approves and releases each one.
 
 > MVP on **Stellar Testnet**, using test assets only. This repository is the **frontend**: the
-> MileVault backend is a separate, external service (`NEXT_PUBLIC_API_URL`).
+> MileVault backend and the Soroban escrow contract are maintained separately (`NEXT_PUBLIC_API_URL`,
+> `NEXT_PUBLIC_ESCROW_CONTRACT_ID`).
 
 ## Repository layout
 
@@ -13,21 +14,17 @@ apps/
   web/        Landing page (Next.js 16)                       → /         dev :3000
   app/        Client & contributor dashboard (basePath /app)  → /app, /a/* dev :3001
   admin/      Operator console (basePath /admin)              → /admin    dev :3002
-contracts/
-  escrow/     Soroban milestone escrow contract (Rust) + PRD §6 tests
 packages/
   shared/     Status enums, types, zod schemas, amount helpers
   ui/         Design system: tokens, prototype styles, layout, motion, icons, components
   tsconfig/   Shared TS configs
 docs/         Architecture, deploy guide, design prototypes + alignment notes
-scripts/      Contract deploy + TS bindings generation
 ```
 
 ## Prerequisites
 
 - Node ≥ 22 and pnpm 12 (`corepack enable` picks the pinned version)
 - A Stellar wallet extension (Freighter, xBull, …) set to **Testnet** (live mode only)
-- Rust + `wasm32v1-none` and the [Stellar CLI](https://developers.stellar.org/docs/tools/cli) (contract work only)
 
 ## Getting started
 
@@ -63,16 +60,6 @@ Set `NEXT_PUBLIC_DATA_SOURCE=live` and `NEXT_PUBLIC_API_URL` to switch to the re
 - **Layout**: 264px sidebar (76px icon rail at 1024–1279px, tab bar below 1024px), content up to
   1200px, responsive down to 280px wide.
 
-## Contract
-
-```bash
-pnpm contract:test          # cargo test: PRD §6 scenarios
-pnpm contract:deploy        # build + deploy to Testnet, then prints the contract ID
-ESCROW_CONTRACT_ID=C... pnpm contract:bindings   # typed TS client → packages/escrow-client
-```
-
-Then set `NEXT_PUBLIC_ESCROW_CONTRACT_ID` for the dashboard and admin, and share it with the backend team.
-
 ## Deploy
 
 One Vercel project with three **services** (root [`vercel.json`](vercel.json)): `web` (`/`),
@@ -86,4 +73,3 @@ One Vercel project with three **services** (root [`vercel.json`](vercel.json)): 
 | `pnpm dev:web` / `dev:app` / `dev:admin` | Run one app |
 | `pnpm build` | Build all apps |
 | `pnpm typecheck` | Typecheck every package |
-| `pnpm contract:*` | Build / test / deploy / bindings for the Soroban contract |

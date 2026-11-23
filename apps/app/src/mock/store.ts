@@ -9,7 +9,7 @@ import type { Draft, MockAgreement, MockEvent, PersonKey, WalletId } from "./typ
 
 /**
  * MOCK "chain + indexer" for the MVP UI.
- * Every mutation mirrors a Soroban contract call (contracts/escrow/src/lib.rs) and enforces
+ * Every mutation mirrors a Soroban escrow contract call and enforces
  * the same rules, so the UI can be exercised end-to-end before the backend exists.
  * Swap these for real contract calls + API reads when integrating.
  */

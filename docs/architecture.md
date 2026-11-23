@@ -8,7 +8,7 @@
                     └───────────────┬───────────────────────────────────────┬────────────────────────┘
                                     │ browser fetch (NEXT_PUBLIC_API_URL)   │ sign via Stellar Wallets Kit
                                     ▼                                       ▼
-                    External MileVault backend                Soroban RPC ──▶ contracts/escrow
+                    External MileVault backend                Soroban RPC ──▶ escrow contract
                     (metadata, profiles, event index)         (source of truth for funds)
 ```
 
@@ -39,7 +39,6 @@ transaction, and the UI says so explicitly (PRD §5).
 | `apps/web` | Landing page (Inter). Proxies `/app/*` and `/a/*` to the dashboard zone. |
 | `apps/app` | Client & contributor dashboard (Open Runde). Wallet kit, React Query, zustand, Radix dialog, sonner. |
 | `apps/admin` | Operator console (basePath `/admin`): KPIs, agreements, wallets, events, system health. |
-| `contracts/escrow` | Soroban (Rust) milestone escrow contract + PRD §6 tests. |
 | `packages/shared` | Status enums, DTO types, zod schemas, 7-decimal amount helpers. |
 | `packages/ui` | Design tokens (`theme.css`) and primitives (Button, Card, StatusBadge, Field…). |
 | `docs/design` | Design prototypes (client & contributor journeys) and design notes. |

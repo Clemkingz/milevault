@@ -3,7 +3,6 @@
 *.webp binary
 *.png binary
 *.jpg binary
-*.wasm binary
 pnpm-lock.yaml linguist-generated=true -diff
 docs/design/prototype/*.html linguist-vendored=true -diff
 docs/design/prototype/*.js linguist-vendored=true

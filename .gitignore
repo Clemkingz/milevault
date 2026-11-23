@@ -10,11 +10,6 @@ build/
 *.tsbuildinfo
 next-env.d.ts
 
-# rust / soroban
-contracts/target/
-contracts/**/test_snapshots/
-.stellar/
-
 # env & secrets
 .env
 .env.*

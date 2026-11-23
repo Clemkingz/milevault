@@ -7,9 +7,9 @@ import { signTransaction } from "./wallet-kit";
 /**
  * Escrow contract client.
  *
- * TODO(contract): once the contract is deployed, run `pnpm contract:bindings` to generate a
+ * TODO(contract): once the contract team publishes the deployed contract, generate a
  * typed client into packages/escrow-client and replace `Client & EscrowMethods` below with it.
- * The method names here mirror contracts/escrow/src/lib.rs.
+ * The method names here mirror the escrow contract interface.
  */
 export interface EscrowMethods {
   create_agreement: unknown;

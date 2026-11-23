@@ -1,5 +1,5 @@
 /**
- * Lifecycle states — must stay in sync with `contracts/escrow/src/types.rs`.
+ * Lifecycle states — must stay in sync with the escrow contract (maintained separately).
  * The Soroban contract is the source of truth; these mirror its enums.
  *
  * Flow (PRD §5 + design prototype):
