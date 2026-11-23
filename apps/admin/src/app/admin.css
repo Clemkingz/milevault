@@ -1,0 +1,44 @@
+/* Operator console additions on top of the shared design system */
+.skip { position: absolute; left: -9999px; top: 8px; z-index: 100; background: var(--ink); color: #fff; padding: 8px 12px; border-radius: 999px; }
+.skip:focus { left: 12px; }
+.adm-chip { display: inline-flex; align-items: center; height: 24px; padding: 0 10px; border-radius: 999px; background: var(--ink); color: #fff; font-size: 12px; font-weight: 500; margin-left: 10px; }
+.side-adm { margin: -8px 0 0 8px; align-self: flex-start; }
+@media (min-width: 1024px) and (max-width: 1279.98px) { .side-adm { display: none; } }
+.side .user .chev { border-radius: 8px; padding: 4px; }
+.side .user .chev:hover { background: var(--gray); color: var(--ink); }
+
+/* KPI tiles */
+.kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.kpi { padding: 18px 20px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.kpi small { display: flex; align-items: center; gap: 6px; color: var(--sub); font-size: 13px; }
+.kpi small i { width: 8px; height: 8px; border-radius: 999px; }
+.kpi b { font-size: 24px; line-height: 32px; font-weight: 500; letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.kpi em { font-style: normal; font-size: 12px; color: var(--soft); }
+@media (max-width: 1199.98px) { .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 400px) { .kpis { grid-template-columns: 1fr; } .kpi b { font-size: 20px; } }
+
+/* Table-like rows */
+.trow { display: flex; align-items: center; gap: 12px; padding: 12px 20px; }
+.trow + .trow { border-top: 1px solid var(--line); }
+.trow .tx { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.trow .tx b { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.trow .tx small { color: var(--sub); font-size: 13px; line-height: 20px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.trow .num { font-weight: 500; white-space: nowrap; text-align: right; }
+.trow .num small { display: block; font-weight: 400; font-size: 12px; color: var(--sub); }
+.trow .meta { color: var(--sub); font-size: 13px; white-space: nowrap; }
+.col-w { width: 150px; display: flex; justify-content: flex-end; flex: none; }
+.pairs { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.pairs .av { flex: none; }
+@media (max-width: 767.98px) {
+  .trow { flex-wrap: wrap; padding: 12px 14px; row-gap: 8px; }
+  .trow .tx { flex: 1 1 60%; }
+  .col-w { width: auto; }
+  .hide-m { display: none !important; }
+}
+.statusdot { display: inline-flex; align-items: center; gap: 6px; font-weight: 500; }
+.statusdot i { width: 8px; height: 8px; border-radius: 999px; background: var(--green); box-shadow: 0 0 0 4px var(--green-bg); }
+.statusdot.warn i { background: var(--amber); box-shadow: 0 0 0 4px var(--amber-bg); }
+.statusdot.down i { background: var(--red); box-shadow: 0 0 0 4px var(--red-bg); }
+.statusdot.idle i { background: var(--seg); box-shadow: 0 0 0 4px var(--gray); }
+.statusdot { flex-wrap: wrap; justify-content: flex-end; white-space: normal; text-align: right; }
+@media (max-width: 480px) { .statusdot { justify-content: flex-start; text-align: left; } .kvs b { min-width: 0; overflow-wrap: anywhere; } }

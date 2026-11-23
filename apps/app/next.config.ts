@@ -19,7 +19,12 @@ const nextConfig: NextConfig = {
   transpilePackages: ["@milevault/ui", "@milevault/shared"],
   poweredByHeader: false,
   async redirects() {
-    return [{ source: "/", destination: "/app/dashboard", basePath: false, permanent: false }];
+    return [
+      { source: "/", destination: "/app/dashboard", basePath: false, permanent: false },
+      // Short share links (/a/MV-1042) arrive here with their original path on Vercel;
+      // Next can't rewrite outside basePath, so redirect into it.
+      { source: "/a/:ref", destination: "/app/a/:ref", basePath: false, permanent: false },
+    ];
   },
   async headers() {
     return [

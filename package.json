@@ -1,7 +1,7 @@
 {
   "name": "milevault",
   "private": true,
-  "description": "Milestone-based escrow payments on Stellar (Soroban) — MVP monorepo",
+  "description": "Milestone-based escrow payments on Stellar (Soroban) \u2014 frontend monorepo",
   "packageManager": "pnpm@12.14.0",
   "engines": {
     "node": ">=22"
@@ -10,16 +10,13 @@
     "dev": "pnpm --parallel --filter \"./apps/*\" dev",
     "dev:web": "pnpm --filter @milevault/web dev",
     "dev:app": "pnpm --filter @milevault/app dev",
-    "dev:api": "pnpm --filter @milevault/api dev",
     "build": "pnpm -r build",
     "typecheck": "pnpm -r typecheck",
     "contract:build": "cd contracts && stellar contract build",
     "contract:test": "cd contracts && cargo test",
     "contract:deploy": "bash scripts/deploy-testnet.sh",
     "contract:bindings": "bash scripts/generate-bindings.sh",
-    "db:up": "docker compose up -d db",
-    "db:generate": "pnpm --filter @milevault/api db:generate",
-    "db:migrate": "pnpm --filter @milevault/api db:migrate"
+    "dev:admin": "pnpm --filter @milevault/admin dev"
   },
   "devDependencies": {
     "typescript": "^5.9.3"

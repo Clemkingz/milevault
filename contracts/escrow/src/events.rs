@@ -1,4 +1,4 @@
-//! Event layout consumed by `apps/api/src/indexer/decode.ts`:
+//! Event layout consumed by the external MileVault backend indexer:
 //!   topics: [Symbol(<name>), u64 agreement_id]
 //!   data:   map { actor, milestone?, amount? }
 use soroban_sdk::{contractevent, Address};

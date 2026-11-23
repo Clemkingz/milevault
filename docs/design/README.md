@@ -37,9 +37,9 @@ are already applied in code — see `packages/ui/src/theme.css`.
 - **Contributor accept / decline** of a funded agreement. Implemented in the contract (`accept`, `decline`) and status model (`Funded → Active`, `Declined`).
 - **Invite deep link** `milevault.app/a/MV-1042`. Implemented at `apps/app/src/app/a/[ref]`, and the landing page rewrites `/a/*` to it.
 - Agreement refs shown as `MV-<id>`. Implemented with `agreementRef()` in `@milevault/shared`.
-- Submission link on submit (`https://…`). Stored off-chain via `PUT /v1/agreements/:id/milestones/:i/submission`.
+- Submission link on submit (`https://…`). Stored off-chain by the external backend.
 
-## API gaps the design implies
+## Backend gaps the design implies (external backend)
 
 | Design element | Gap |
 |---|---|

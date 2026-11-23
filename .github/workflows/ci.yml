@@ -11,7 +11,7 @@ concurrency:
 
 jobs:
   web:
-    name: Typecheck & build (web, app, api)
+    name: Typecheck & build (web, app, admin)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -22,12 +22,8 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm typecheck
-      - name: Build landing
-        run: pnpm --filter @milevault/web build
-        env:
-          APP_URL: http://localhost:3001
-      - name: Build dashboard
-        run: pnpm --filter @milevault/app build
+      - name: Build all apps (web, app, admin)
+        run: pnpm build
 
   contract:
     name: Soroban contract tests

@@ -1,0 +1,9 @@
+@import "tailwindcss";
+@import "@milevault/ui/theme.css";
+@import "@milevault/ui/prototype.css";
+@import "@milevault/ui/overrides.css";
+@import "@milevault/ui/motion.css";
+@import "@milevault/ui/layout.css";
+@import "./admin.css";
+
+@source "../../../../packages/ui/src";

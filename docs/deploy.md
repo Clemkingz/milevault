@@ -1,75 +1,53 @@
-# Deploying MileVault
+# Deploying MileVault (frontend)
 
-MileVault deploys as **two Vercel projects** from this one repository, plus (later) the API on a host
-that supports long-running processes.
+This repo deploys as **one Vercel project with three Next.js services**, configured in the root
+[`vercel.json`](../vercel.json) ([Vercel services](https://vercel.com/docs/services), Beta).
+The MileVault backend is an **external service** owned separately. The frontends call it from the
+browser at `NEXT_PUBLIC_API_URL`.
 
-```
-milevault.app (landing, apps/web) ──/app/*, /a/*──▶ milevault-app.vercel.app (dashboard, apps/app, basePath /app)
-```
+| Service | Root | basePath | Public paths |
+|---|---|---|---|
+| `web` | `apps/web` | — | `/` and everything not matched below (landing, legal, sitemap, OG images) |
+| `app` | `apps/app` | `/app` | `/app`, `/app/*`, `/a/*` (short share links redirect to `/app/a/*`) |
+| `admin` | `apps/admin` | `/admin` | `/admin`, `/admin/*` |
 
-Users only ever see the landing domain: the landing proxies `/app/*` and `/a/*` to the dashboard project.
+Vercel passes each service the **original request path**, which is why `app` and `admin` use a
+`basePath` matching their public prefix. Rewrites run from most to least specific, with `web` as the
+catch-all.
 
-## 1. Dashboard project (`apps/app`) — deploy this first
+**Bindings: none.** No service calls another server-side. The three apps only link to each other in
+the browser (same domain), and the backend is outside Vercel. A binding would only be needed if one
+of these services started calling another from server code.
 
-| Setting | Value |
-|---|---|
-| Root Directory | `apps/app` |
-| Framework | Next.js (auto-detected; `apps/app/vercel.json` sets install/build) |
-| Include files outside the Root Directory | **Enabled** (needed for `packages/*`) |
-| Node.js version | 22.x or 24.x |
+## Project setup
 
-Environment variables:
+1. Import the repo into Vercel as **one** project (Root Directory: repository root).
+2. Vercel reads `vercel.json` → `services`. pnpm is pinned via `packageManager` (`pnpm@12.14.0`).
+3. Environment variables (Project → Settings → Environment Variables). See `.env.example`:
 
-| Variable | Value |
-|---|---|
-| `NEXT_PUBLIC_DATA_SOURCE` | `mock` (in-browser demo, the default) until the contract and API are live |
-| `NEXT_PUBLIC_SITE_URL` | The landing's public URL, e.g. `https://milevault.app` (used for share links and metadata) |
-| `NEXT_PUBLIC_STELLAR_NETWORK` etc. | See `.env.example`. Only needed with `NEXT_PUBLIC_DATA_SOURCE=live` |
+| Variable | Needed for | Notes |
+|---|---|---|
+| `NEXT_PUBLIC_SITE_URL` | all | Public domain, e.g. `https://milevault.app`. Falls back to the Vercel URL |
+| `NEXT_PUBLIC_DATA_SOURCE` | app, admin | `mock` (default) until the backend is ready, then `live` |
+| `NEXT_PUBLIC_API_URL` | app, admin | External backend base URL (`live` only). The backend must allow CORS from the site domain |
+| `NEXT_PUBLIC_ESCROW_CONTRACT_ID`, … | app, admin | Stellar settings for `live` |
 
-Note the deployment URL (for example `https://milevault-app.vercel.app`).
+## Admin access
 
-## 2. Landing project (`apps/web`)
+In demo mode the console offers **Continue as demo operator**. For production, operator sign-in must
+be enforced by the backend (for example, a wallet signature checked against an allowlist). The admin UI
+gates on that session. The `/admin` path is public on Vercel, so **access control must not rely on
+the URL being hidden**. Optionally add Vercel Deployment Protection or Firewall rules on `/admin`.
 
-| Setting | Value |
-|---|---|
-| Root Directory | `apps/web` |
-| Include files outside the Root Directory | **Enabled** |
+## Local development
 
-Environment variables:
-
-| Variable | Value |
-|---|---|
-| `APP_URL` | **Required.** The dashboard URL from step 1. The build fails with a clear error if it's missing |
-| `NEXT_PUBLIC_SITE_URL` | The landing's public URL (canonical URLs, sitemap, OG images). Falls back to the Vercel URL |
-
-Attach your custom domain to **this** project.
+- `pnpm dev`: web :3000 (open this), app :3001, admin :3002. The landing proxies `/app`, `/a/*`,
+  `/admin` in dev only (`LOCAL_APP_URL`, `LOCAL_ADMIN_URL`).
+- `vercel dev`: all services with the real `vercel.json` routing.
 
 ## Notes
 
-- **pnpm**: the repo pins `pnpm@12.14.0` in `packageManager`. Vercel's pnpm switches to that exact
-  version automatically. Optionally set `ENABLE_EXPERIMENTAL_COREPACK=1` on both projects.
-- **Skipping builds**: each `vercel.json` has an `ignoreCommand` that skips a deploy when nothing in that
-  app, `packages/`, or the lockfile changed.
-- **PWA**: the service worker (`/app/sw.js`) registers in production builds only. Headers for it are set
-  in `apps/app/next.config.ts`.
-- **Security headers** (HSTS, nosniff, frame-deny, referrer, permissions policy) are set in both
-  `next.config.ts` files. The dashboard also sends `X-Robots-Tag: noindex`.
-- **Preview deployments**: point a landing preview at a dashboard preview by setting `APP_URL` for the
-  Preview environment.
-
-## API (`apps/api`) — not on Vercel yet
-
-The API runs a long-lived Soroban event indexer and needs Postgres, so host it on a platform with
-persistent processes (Railway, Render, Fly.io) with a managed Postgres (Neon, Supabase, RDS):
-
-```bash
-pnpm --filter @milevault/api db:migrate
-pnpm --filter @milevault/api start        # PORT, DATABASE_URL, ESCROW_CONTRACT_ID, CORS_ORIGIN
-```
-
-Set `CORS_ORIGIN` to the landing domain. Then switch the dashboard to `NEXT_PUBLIC_DATA_SOURCE=live`
-and set `NEXT_PUBLIC_API_URL`.
-
-## Contract
-
-See the README (`pnpm contract:deploy`). CI runs `cargo test` on every push.
+- **Security headers** on all three apps. `app` and `admin` also send `X-Robots-Tag: noindex`.
+- **PWA**: the dashboard's service worker (`/app/sw.js`) registers in production builds only.
+- Services are a Beta feature. Fallback: deploy each app as its own Vercel project and restore an
+  external-URL proxy in `apps/web/next.config.ts`.

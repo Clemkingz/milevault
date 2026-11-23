@@ -2,7 +2,8 @@ import type { ActivityItem, Agreement, AgreementMetadataInput, DashboardSummary 
 import { env } from "./env";
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${env.apiUrl}${path}`, {
+  if (!env.apiUrl) throw new Error("NEXT_PUBLIC_API_URL is not set — point it at the MileVault backend.");
+  const res = await fetch(new URL(path.replace(/^\//, ""), env.apiUrl.endsWith("/") ? env.apiUrl : `${env.apiUrl}/`), {
     ...init,
     headers: { "content-type": "application/json", ...init?.headers },
   });
@@ -13,7 +14,11 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return res.json() as Promise<T>;
 }
 
-/** Off-chain metadata + indexed activity. Balances/permissions always come from the contract. */
+/**
+ * Client for the external MileVault backend (browser → NEXT_PUBLIC_API_URL).
+ * Off-chain metadata + indexed activity; balances and permissions always come from the contract.
+ * Paths are relative to the backend base URL, e.g. https://api.milevault.app/ + "v1/agreements/1".
+ */
 export const api = {
   dashboard: (address: string) => request<DashboardSummary>(`/v1/wallets/${address}/dashboard`),
   agreements: (address: string) => request<Agreement[]>(`/v1/wallets/${address}/agreements`),

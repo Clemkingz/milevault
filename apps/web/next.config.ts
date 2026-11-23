@@ -1,18 +1,16 @@
 import type { NextConfig } from "next";
 
 /**
- * Multi-zone (same pattern as the reference project):
- *   /       → this landing app
- *   /app/*  → the dashboard app (apps/app, basePath "/app"), proxied via rewrites
- *   /a/*    → shared-agreement deep links, served by the dashboard
+ * Landing ("web" service). On Vercel, top-level routing in /vercel.json sends
+ *   /app/*, /a/*  → app service      /admin/*  → admin service      everything else → here.
+ * Locally (`pnpm dev`, no Vercel routing) these rewrites stand in for that, proxying to
+ * the other dev servers so the whole product works from http://localhost:3000.
+ * The backend is an external service (NEXT_PUBLIC_API_URL) — not routed through here.
+ * (`vercel dev` runs all services with the real routing; the rewrites are skipped there.)
  */
-const APP_URL = process.env.APP_URL ?? "http://localhost:3001";
-
-if (process.env.VERCEL && !process.env.APP_URL) {
-  throw new Error(
-    "APP_URL is not set. Set it to the dashboard deployment URL (e.g. https://milevault-app.vercel.app) in the landing project's Vercel environment variables.",
-  );
-}
+const LOCAL_APP = process.env.LOCAL_APP_URL ?? "http://localhost:3001";
+const LOCAL_ADMIN = process.env.LOCAL_ADMIN_URL ?? "http://localhost:3002";
+const onVercel = !!process.env.VERCEL;
 
 const securityHeaders = [
   { key: "X-Content-Type-Options", value: "nosniff" },
@@ -26,10 +24,13 @@ const nextConfig: NextConfig = {
   transpilePackages: ["@milevault/ui", "@milevault/shared"],
   poweredByHeader: false,
   async rewrites() {
+    if (onVercel) return [];
     return [
-      { source: "/app", destination: `${APP_URL}/app` },
-      { source: "/app/:path*", destination: `${APP_URL}/app/:path*` },
-      { source: "/a/:ref", destination: `${APP_URL}/app/a/:ref` },
+      { source: "/app", destination: `${LOCAL_APP}/app` },
+      { source: "/app/:path*", destination: `${LOCAL_APP}/app/:path*` },
+      { source: "/a/:ref", destination: `${LOCAL_APP}/app/a/:ref` },
+      { source: "/admin", destination: `${LOCAL_ADMIN}/admin` },
+      { source: "/admin/:path*", destination: `${LOCAL_ADMIN}/admin/:path*` },
     ];
   },
   async headers() {
