@@ -16,10 +16,10 @@
   },
   "rewrites": [
     { "source": "/app", "destination": { "service": "app" } },
-    { "source": "/app/:path*", "destination": { "service": "app" } },
-    { "source": "/a/:path*", "destination": { "service": "app" } },
+    { "source": "/app/(.*)", "destination": { "service": "app" } },
+    { "source": "/a/(.*)", "destination": { "service": "app" } },
     { "source": "/admin", "destination": { "service": "admin" } },
-    { "source": "/admin/:path*", "destination": { "service": "admin" } },
-    { "source": "/:path*", "destination": { "service": "web" } }
+    { "source": "/admin/(.*)", "destination": { "service": "admin" } },
+    { "source": "/(.*)", "destination": { "service": "web" } }
   ]
 }
