@@ -6,4 +6,6 @@ export const env = {
   /** External MileVault backend base URL (not part of this repo) */
   apiUrl: process.env.NEXT_PUBLIC_API_URL ?? "",
   network: process.env.NEXT_PUBLIC_STELLAR_NETWORK ?? "testnet",
+  /** Reown (WalletConnect) project ID. When set, "WalletConnect" is offered for mobile wallets via QR. */
+  walletConnectProjectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID ?? "",
 } as const;

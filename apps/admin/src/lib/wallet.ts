@@ -3,24 +3,44 @@
 import { env } from "./env";
 import { mock } from "./backend";
 
-/** Wallets offered on the sign-in screen → Stellar Wallets Kit module ids */
-export const WALLETS = [
+export type WalletName = "Freighter" | "xBull" | "Albedo" | "LOBSTR" | "Hana" | "WalletConnect";
+/** Wallets offered in the connect dialog (design order) → Stellar Wallets Kit module ids.
+ *  "varial" is the kit's module id for Freighter. WalletConnect needs a Reown project ID. */
+export const WALLETS: readonly { name: WalletName; id: string }[] = [
   { name: "Freighter", id: "varial" },
   { name: "xBull", id: "xbull" },
   { name: "Albedo", id: "albedo" },
   { name: "LOBSTR", id: "lobstr" },
   { name: "Hana", id: "hana" },
-] as const;
-export type WalletName = (typeof WALLETS)[number]["name"];
+  ...(env.walletConnectProjectId ? [{ name: "WalletConnect" as const, id: "wallet_connect" }] : []),
+];
 
 export class WalletDeclined extends Error { constructor() { super("Declined in the wallet"); } }
 
 let kitReady: Promise<typeof import("@creit.tech/stellar-wallets-kit")> | null = null;
+/** The WalletConnect module starts its relay client in the background; wait for it before use. */
+let wcModule: { isAvailable: () => Promise<boolean> } | null = null;
+async function wcReady(timeoutMs = 15_000) {
+  for (const end = Date.now() + timeoutMs; Date.now() < end; await new Promise((r) => setTimeout(r, 250)))
+    if (wcModule && (await wcModule.isAvailable())) return;
+  throw new Error("WalletConnect couldn’t start. Check the Reown project ID and that this domain is allowed in Reown.");
+}
 function kit() {
   kitReady ??= (async () => {
     const m = await import("@creit.tech/stellar-wallets-kit");
     const { defaultModules } = await import("@creit.tech/stellar-wallets-kit/modules/utils");
-    m.StellarWalletsKit.init({ modules: defaultModules(), network: env.network === "mainnet" || env.network === "public" ? m.Networks.PUBLIC : m.Networks.TESTNET });
+    const mainnet = env.network === "mainnet" || env.network === "public";
+    const modules = defaultModules();
+    if (env.walletConnectProjectId) {
+      const wc = await import("@creit.tech/stellar-wallets-kit/modules/wallet-connect");
+      const origin = window.location.origin;
+      modules.push(wcModule = new wc.WalletConnectModule({
+        projectId: env.walletConnectProjectId,
+        metadata: { name: "MileVault", description: "Milestone escrow payments on Stellar", url: origin, icons: [`${origin}/admin/icon.svg`] },
+        allowedChains: [mainnet ? wc.WalletConnectTargetChain.PUBLIC : wc.WalletConnectTargetChain.TESTNET],
+      }));
+    }
+    m.StellarWalletsKit.init({ modules, network: mainnet ? m.Networks.PUBLIC : m.Networks.TESTNET });
     return m;
   })();
   return kitReady;
@@ -43,6 +63,7 @@ export const wallet = {
     const m = await kit();
     try {
       m.StellarWalletsKit.setWallet(WALLETS.find((w) => w.name === name)!.id);
+      if (name === "WalletConnect") await wcReady();
       const { address } = await m.StellarWalletsKit.fetchAddress();
       const net = await m.StellarWalletsKit.getNetwork().catch(() => null);
       return { address, networkPassphrase: net?.networkPassphrase ?? null };

@@ -36,7 +36,8 @@ export async function signIn(name: WalletName) {
   } catch (e) {
     if (e instanceof WalletDeclined) return ui.open({ t: "connDeclined", wallet: name });
     ui.close();
-    ui.toast(e instanceof ApiError ? e.message : "Couldn’t connect the wallet. Try again.", { tone: "error" });
+    if (!(e instanceof ApiError)) console.error("[MileVault] wallet connection failed:", e);
+    ui.toast(e instanceof ApiError ? e.message : `Couldn’t connect ${name}. ${e instanceof Error && e.message ? e.message : "Try again."}`, { tone: "error" });
   }
 }
 

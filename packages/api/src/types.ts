@@ -1,5 +1,5 @@
 /**
- * Shapes returned by the MileVault backend (https://milevault-api-production.up.railway.app/docs).
+ * Shapes returned by the MileVault backend (https://api.usemilevault.com/docs).
  * Fields marked "observed" were verified against live responses; others follow the OpenAPI
  * descriptions and are typed loosely where the spec does not document the payload.
  */
