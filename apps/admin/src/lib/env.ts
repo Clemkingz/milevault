@@ -6,6 +6,10 @@ export const env = {
   /** External MileVault backend base URL (not part of this repo) */
   apiUrl: process.env.NEXT_PUBLIC_API_URL ?? "",
   network: process.env.NEXT_PUBLIC_STELLAR_NETWORK ?? "testnet",
-  /** Reown (WalletConnect) project ID. When set, "WalletConnect" is offered for mobile wallets via QR. */
-  walletConnectProjectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID ?? "",
+  /**
+   * Reown (WalletConnect) project ID: how phones reach the Varial app. It's a public identifier
+   * (shipped to every browser; Reown restricts it to the allowed domains), so MileVault's own ID is
+   * the default and deployments work without extra setup. Override with NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID.
+   */
+  walletConnectProjectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || "b8cc56756132b11f2077932ac3d6f807",
 } as const;

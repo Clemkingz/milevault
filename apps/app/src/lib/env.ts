@@ -6,8 +6,12 @@ export const env = {
   /** Public landing domain (the app is served under it at /app). Falls back to Vercel's URL. */
   siteUrl: process.env.NEXT_PUBLIC_SITE_URL as string | undefined,
   network: process.env.NEXT_PUBLIC_STELLAR_NETWORK ?? "testnet",
-  /** Reown (WalletConnect) project ID. When set, "WalletConnect" is offered for mobile wallets via QR. */
-  walletConnectProjectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID ?? "",
+  /**
+   * Reown (WalletConnect) project ID: how phones reach the Varial app. It's a public identifier
+   * (shipped to every browser; Reown restricts it to the allowed domains), so MileVault's own ID is
+   * the default and deployments work without extra setup. Override with NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID.
+   */
+  walletConnectProjectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || "b8cc56756132b11f2077932ac3d6f807",
   /** Fallback only: Horizon normally comes from GET /stellar/network */
   horizonUrl: process.env.NEXT_PUBLIC_HORIZON_URL ?? "https://horizon-testnet.stellar.org",
   /** External MileVault backend (separate service, not in this repo). Required when dataSource is "live". */
