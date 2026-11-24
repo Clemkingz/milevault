@@ -2,7 +2,7 @@
 
 import * as Dialog from "@radix-ui/react-dialog";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { shortAddr } from "@milevault/api";
 import { Icon } from "@milevault/ui";
 import { KV, Note } from "../bits";
@@ -12,7 +12,7 @@ import { signIn, signOut } from "@/lib/auth";
 import { env } from "@/lib/env";
 import { useSession } from "@/lib/session";
 import { useUI, type Modal } from "@/lib/ui";
-import { WALLETS, WalletDeclined } from "@/lib/wallet";
+import { device, walletChoices, walletIcon, walletKind, walletLabel, WalletDeclined } from "@/lib/wallet";
 import { FB, Foot, Head, HeroDlg, WalletRow } from "./parts";
 import { ActionDialog, ConfirmDialog } from "./tx";
 
@@ -34,24 +34,53 @@ function InstallDialog() {
   );
 }
 
+/**
+ * Wallet picker that adapts to the device: on desktop it detects installed extensions (and links
+ * to install the rest); on a phone it offers wallet apps over WalletConnect and web wallets.
+ */
+function WalletPicker({ sw }: { sw?: boolean }) {
+  const [state, setState] = useState<Awaited<ReturnType<typeof walletChoices>> | null>(null);
+  useEffect(() => {
+    let on = true;
+    walletChoices().then((r) => on && setState(r)).catch(() => on && setState({ mobile: device().mobile, list: [] }));
+    return () => { on = false; };
+  }, []);
+  const mobile = state?.mobile ?? device().mobile;
+  return (
+    <HeroDlg k="W-01">
+      <Head title={sw ? "Switch wallet" : "Connect a wallet"}>
+        {mobile ? "Pick the Stellar wallet you use on this phone. You’ll approve the connection, then one sign-in message. It moves no funds." : "Pick a Stellar wallet. You’ll approve the connection, then one sign-in message. It moves no funds."}
+      </Head>
+      <div className="wlist mv-list" aria-busy={!state}>
+        {!state ? [0, 1, 2].map((i) => <div key={i} className="wopt sk-row"><span className="sk" style={{ width: 40, height: 40, borderRadius: 8 }} /><span className="tx"><span className="sk" style={{ width: 110, height: 14 }} /><span className="sk" style={{ width: 160, height: 12, marginTop: 6 }} /></span></div>)
+          : state.list.map(({ option: o, available, note }, i) => (
+            <WalletRow key={o.name} name={o.name} label={walletLabel(o.name, mobile)} muted={!available}
+              sub={<span className="wsub"><span className={`wstat${available ? (note === "Detected" || note.startsWith("You’re") ? " ok" : "") : " no"}`}>{note}</span>{i === 0 && available && (o.name === "Freighter" || o.name === "Freighter Mobile") && <span className="rec">Recommended</span>}</span>}
+              right={available ? <Icon name="right" size={20} /> : <span className="winst">Install<Icon name="external" size={14} /></span>}
+              onClick={() => (available ? void signIn(o.name) : o.install && window.open(o.install, "_blank", "noopener"))} />
+          ))}
+      </div>
+      {state?.footnote && <Note icon="info">{state.footnote}</Note>}
+      <Note icon="lock">MileVault only reads your public address. We never see your keys.</Note>
+    </HeroDlg>
+  );
+}
+
 function ModalBody({ md }: { md: Modal }) {
   const ui = useUI.getState();
   const router = useRouter();
   const afterConnect = useUI((s) => s.afterConnect);
   const short = useSession((s) => s.shortAddress);
   switch (md.t) {
-    case "connect": return (
-      <HeroDlg k="W-01">
-        <Head title={md.sw ? "Switch wallet" : "Connect a wallet"}>Pick a Stellar wallet. You’ll approve the connection, then one sign-in message — it moves no funds.</Head>
-        <div className="wlist mv-list">
-          {WALLETS.map((w, i) => <WalletRow key={w.name} name={w.name} sub={i === 0 ? <span className="rec">Recommended</span> : undefined} right={<Icon name="right" size={20} />} onClick={() => void signIn(w.name)} />)}
-        </div>
-        <Note icon="lock">MileVault only reads your public address. We never see your keys.</Note>
-      </HeroDlg>);
+    case "connect": return <WalletPicker sw={md.sw} />;
     case "connecting": return (
       <HeroDlg k={md.step === "address" ? "W-02" : "T-02"} className="waiting">
         <Head title={md.step === "address" ? `Waiting for ${md.wallet}` : "Sign in to MileVault"}>
-          {md.step === "address" ? `Approve the connection request in ${md.wallet}. MileVault only asks for your public address.` : `Approve the sign-in message in ${md.wallet}. It proves this wallet is yours; it can’t move funds and is never sent to the network.`}
+          {md.step === "address"
+            ? walletKind(md.wallet) === "app" ? "Approve the connection in the Freighter app, then come back to this page. MileVault only asks for your public address."
+            : walletKind(md.wallet) === "qr" ? (device().mobile ? "Choose your wallet app and approve the connection, then come back to this page." : "Scan the QR code with Freighter Mobile (or another Stellar wallet app) and approve the connection.")
+            : `Approve the connection request in ${md.wallet}. MileVault only asks for your public address.`
+            : `Approve the sign-in message in ${walletKind(md.wallet) === "app" ? "the Freighter app" : md.wallet}. It proves this wallet is yours; it can’t move funds and is never sent to the network.`}
         </Head>
         <WalletRow name={md.wallet} sub={<small>{md.step === "address" ? "Waiting for approval…" : "Waiting for your signature…"}</small>} right={<Icon name="loading" size={20} color="#2EBEF2" className="spin" />} active />
         <Foot><FB onClick={() => ui.open({ t: "connect" })}>Choose another wallet</FB></Foot>
@@ -93,7 +122,7 @@ function WalletPopup() {
     <>
       <div className="ext" role="dialog" aria-label={`${name} request`}>
         <div className="arrow" />
-        <div className="eh"><img src={imgUrl(`wl-${name.toLowerCase()}`)} alt="" /><div><b>{name}</b><small>{prompt.address ? shortAddr(prompt.address) : "Demo wallet"}</small></div><span className="net">Testnet</span></div>
+        <div className="eh"><img src={imgUrl(walletIcon(name))} alt="" /><div><b>{name}</b><small>{prompt.address ? shortAddr(prompt.address) : "Demo wallet"}</small></div><span className="net">Testnet</span></div>
         <div className="eb">
           <div className="site"><Icon name="lock" size={12} />milevault.app wants you to {prompt.kind === "connect" ? "connect" : "sign"}</div>
           <h4>{prompt.kind === "connect" ? "Share your public address" : prompt.title}</h4>

@@ -12,7 +12,7 @@ import { ListSkeleton } from "@/components/shell/skeleton";
 import { useActions } from "@/components/use-actions";
 import { addTrustline, fundWithFriendbot, getTestUsdc } from "@/lib/funding";
 import { useEscrowConfig, useNetwork, useWalletOverview } from "@/lib/queries";
-import { WalletDeclined } from "@/lib/wallet";
+import { walletIcon, WalletDeclined } from "@/lib/wallet";
 import { useSession } from "@/lib/session";
 import { useUI } from "@/lib/ui";
 
@@ -46,7 +46,7 @@ export function WalletsView() {
         <div className="l-main">
           <div className="card wcard">
             <div className="wtop">
-              <span className="wlogo" style={{ padding: 0, overflow: "hidden" }}><img src={imgUrl(`wl-${walletName.toLowerCase()}`)} alt="" width={44} height={44} /></span>
+              <span className="wlogo" style={{ padding: 0, overflow: "hidden" }}><img src={imgUrl(walletIcon(walletName))} alt="" width={44} height={44} /></span>
               <div className="tx">
                 <div className="n">{walletName}<StatusBadge status="connected" /></div>
                 <button className="a" onClick={() => copy(w.address)} title="Copy address"><span className="w-d">{w.address.slice(0, 9)}…{w.address.slice(-6)}</span><span className="w-m">{shortAddr(w.address)}</span><Icon name="copy" size={14} /></button>

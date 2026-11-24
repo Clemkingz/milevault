@@ -251,3 +251,14 @@
 .warnbox.act { flex-wrap: wrap; align-items: center; }
 .warnbox.act > span { flex: 1 1 240px; }
 .warnbox.act > .btn { flex: none; }
+
+/* Wallet picker: detection status */
+.wopt .wsub { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.wopt .wstat { font-size: 13px; line-height: 20px; color: var(--sub); }
+.wopt .wstat.ok { color: #00A84B; display: inline-flex; align-items: center; gap: 6px; }
+.wopt .wstat.ok::before { content: ""; width: 7px; height: 7px; border-radius: 999px; background: #00CE5C; }
+.wopt .wstat.no { color: var(--soft); }
+.wopt.muted .lg { filter: grayscale(1); opacity: .7; }
+.wopt.muted b { color: var(--sub); }
+.wopt .winst { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 500; color: var(--pri); white-space: nowrap; }
+.wopt.sk-row { cursor: default; }

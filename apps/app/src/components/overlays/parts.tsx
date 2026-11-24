@@ -1,5 +1,6 @@
 "use client";
 
+import { walletIcon } from "@/lib/wallet";
 import * as Dialog from "@radix-ui/react-dialog";
 import type { ReactNode } from "react";
 import { Button, Icon, type ButtonVariant } from "@milevault/ui";
@@ -63,11 +64,11 @@ export function BallDlg({ k, head, children }: { k: string; head: ReactNode; chi
   );
 }
 
-export function WalletRow({ name, sub, right, active, onClick }: { name: string; sub?: ReactNode; right?: ReactNode; active?: boolean; onClick?: () => void }) {
+export function WalletRow({ name, label, sub, right, active, muted, onClick }: { name: string; label?: string; sub?: ReactNode; right?: ReactNode; active?: boolean; muted?: boolean; onClick?: () => void }) {
   return (
-    <button className={`wopt${active ? " act" : ""}`} onClick={onClick} type="button">
-      <img className="lg" src={imgUrl(`wl-${name.toLowerCase()}`)} alt="" />
-      <span className="tx"><b>{name}</b>{sub}</span>
+    <button className={`wopt${active ? " act" : ""}${muted ? " muted" : ""}`} onClick={onClick} type="button">
+      <img className="lg" src={imgUrl(walletIcon(name))} alt="" />
+      <span className="tx"><b>{label ?? name}</b>{sub}</span>
       {right}
     </button>
   );

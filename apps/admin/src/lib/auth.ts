@@ -4,7 +4,7 @@ import { ApiError } from "@milevault/api";
 import { api, queryClient } from "./backend";
 import { useSession } from "./session";
 import { toast } from "./toast";
-import { wallet, WalletDeclined, type WalletName } from "./wallet";
+import { wallet, WalletDeclined, WalletNotInstalled, type WalletName } from "./wallet";
 
 export type SignInResult = "ok" | "declined" | "wrong_network" | "error";
 
@@ -18,13 +18,14 @@ export async function signIn(name: WalletName, demoAddress?: string): Promise<Si
     const { address, networkPassphrase } = await wallet.connect(name, demoAddress);
     if (networkPassphrase && networkPassphrase !== net.networkPassphrase) return "wrong_network";
     const ch = await api.auth.challenge(address);
-    const signed = await wallet.sign(ch.transaction, { networkPassphrase: ch.networkPassphrase, address });
+    const signed = await wallet.sign(ch.transaction, { networkPassphrase: ch.networkPassphrase, address, purpose: "signin", wallet: name });
     const tok = await api.auth.verify(signed);
     queryClient.clear();
     useSession.getState().set({ token: tok.walletToken, address: tok.address, expiresAt: tok.expiresAt, walletId: name });
     return "ok";
   } catch (e) {
     if (e instanceof WalletDeclined) return "declined";
+    if (e instanceof WalletNotInstalled) { toast(`${name} isn’t installed in this browser. Install it, then refresh this page.`, "warning"); return "error"; }
     toast(e instanceof ApiError ? e.message : "Couldn’t sign in. Try again.", "error");
     return "error";
   }

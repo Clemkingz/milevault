@@ -10,7 +10,7 @@ import { signIn, signOut, type SignInResult } from "@/lib/auth";
 import { api, mock } from "@/lib/backend";
 import { env } from "@/lib/env";
 import { useSession } from "@/lib/session";
-import { WALLETS, type WalletName } from "@/lib/wallet";
+import { device, walletChoices, walletLabel, type WalletName } from "@/lib/wallet";
 
 const NAV: [string, string, IconName][] = [
   ["/overview", "Overview", "home"],
@@ -45,6 +45,8 @@ const MSG: Record<Exclude<SignInResult, "ok" | "error">, string> = {
 function Gate({ expired }: { expired: boolean }) {
   const [busy, setBusy] = useState<string | null>(null);
   const [warn, setWarn] = useState<string | null>(null);
+  const [choices, setChoices] = useState<Awaited<ReturnType<typeof walletChoices>> | null>(null);
+  useEffect(() => { if (!mock) walletChoices().then(setChoices).catch(() => setChoices({ mobile: device().mobile, list: [] })); }, []);
   const go = async (key: string, name: WalletName, demo?: string) => {
     setBusy(key); setWarn(null);
     const r = await signIn(name, demo);
@@ -63,10 +65,15 @@ function Gate({ expired }: { expired: boolean }) {
           <Button h={40} variant="sec" loading={busy === "user"} loadingText="Signing in…" disabled={!!busy} onClick={() => go("user", "Freighter", mockWallets[0]!.address)}>Try a non-operator wallet</Button>
         </div>
       ) : (
-        <div className="adm-wallets grid">
-          {WALLETS.map((w) => (
-            <Button key={w.name} h={44} variant="sec" loading={busy === w.name} loadingText="Check your wallet…" disabled={!!busy} onClick={() => go(w.name, w.name)}>{w.name}</Button>
-          ))}
+        <div className="adm-wallets">
+          {!choices ? <Button h={44} variant="sec" loading loadingText="Finding your wallets…">Finding your wallets…</Button>
+            : choices.list.map(({ option: o, available, note }) => (
+              <Button key={o.name} h={44} className="adm-wbtn" variant={available ? "sec" : "ghost"} loading={busy === o.name} loadingText="Check your wallet…" disabled={!!busy}
+                onClick={() => (available ? go(o.name, o.name) : o.install && window.open(o.install, "_blank", "noopener"))}>
+                <span className="adm-wopt"><b>{walletLabel(o.name, choices.mobile)}</b><small className={available ? (note === "Detected" ? "ok" : "") : "no"}>{available ? note : "Not installed · Install"}</small></span>
+              </Button>
+            ))}
+          {choices?.footnote && <div className="adm-wfoot">{choices.footnote}</div>}
         </div>
       )}
       <div className="note"><Icon name="lock" size={16} /><span>{mock ? "Demo mode: an in-browser mock backend, no network calls." : "Signing proves you own the wallet. It can’t move funds and is never sent to the network."}</span></div>

@@ -58,7 +58,11 @@ export function createApi({ transport, getToken, onUnauthorized }: ClientOptions
   async function call<T>(req: Omit<TransportRequest, "token">, auth = true): Promise<T> {
     let res: TransportResponse;
     try { res = await transport({ ...req, token: auth ? getToken() : null }); }
-    catch { throw new ApiError(0, "Can’t reach MileVault. Check your connection and try again.", "NETWORK_ERROR"); }
+    catch (e) {
+      // Usually CORS (the API doesn't allow this site's origin) or a missing/wrong NEXT_PUBLIC_API_URL
+      console.error(`[MileVault] request to ${req.path} failed before reaching the API (from ${typeof location !== "undefined" ? location.origin : "?"}):`, e);
+      throw new ApiError(0, "Can’t reach MileVault. Check your connection and try again.", "NETWORK_ERROR");
+    }
     if (req.raw && res.blob) return res.blob as T;
     const env = res.json as (Envelope<T> & { error?: ApiErrorBody }) | undefined;
     if (res.status >= 200 && res.status < 300 && !env) return undefined as T; // 204 No Content
