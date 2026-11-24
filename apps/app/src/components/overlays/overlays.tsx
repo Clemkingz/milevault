@@ -12,7 +12,7 @@ import { signIn, signOut } from "@/lib/auth";
 import { env } from "@/lib/env";
 import { useSession } from "@/lib/session";
 import { useUI, type Modal } from "@/lib/ui";
-import { device, openAppForPairing, openWalletApp, preparePhonePairing, walletChoices, walletIcon, walletKind, walletLabel, WalletDeclined } from "@/lib/wallet";
+import { device, openWalletApp, preparePhonePairing, walletChoices, walletIcon, walletKind, walletLabel, WalletDeclined } from "@/lib/wallet";
 import { FB, Foot, Head, HeroDlg, WalletRow } from "./parts";
 import { ActionDialog, ConfirmDialog } from "./tx";
 
@@ -42,7 +42,7 @@ function WalletPicker({ sw }: { sw?: boolean }) {
   const [state, setState] = useState<Awaited<ReturnType<typeof walletChoices>> | null>(null);
   useEffect(() => {
     let on = true;
-    preparePhonePairing(); // phones: have the Varial pairing link ready before the tap
+    preparePhonePairing(); // phones: warm WalletConnect up so its window opens straight away
     walletChoices().then((r) => on && setState(r)).catch(() => on && setState({ mobile: device().mobile, list: [] }));
     return () => { on = false; };
   }, []);
@@ -60,7 +60,6 @@ function WalletPicker({ sw }: { sw?: boolean }) {
               right={available ? <Icon name="right" size={20} /> : <span className="winst">Install<Icon name="external" size={14} /></span>}
               onClick={() => {
                 if (!available) { if (o.install) window.open(o.install, "_blank", "noopener"); return; }
-                openAppForPairing(o.name); // must run inside the tap, before anything async
                 void signIn(o.name);
               }} />
           ))}
@@ -82,7 +81,7 @@ function ModalBody({ md }: { md: Modal }) {
       <HeroDlg k={md.step === "address" ? "W-02" : "T-02"} className="waiting">
         <Head title={md.step === "address" ? `Waiting for ${md.wallet}` : "Sign in to MileVault"}>
           {md.step === "address"
-            ? walletKind(md.wallet) === "app" ? "Approve the connection in the Varial app, then come back to this page. MileVault only asks for your public address."
+            ? walletKind(md.wallet) === "app" ? "Choose Varial in the WalletConnect window, approve the connection in the app, then come back to this page. MileVault only asks for your public address."
             : walletKind(md.wallet) === "qr" ? (device().mobile ? "Choose your wallet app and approve the connection, then come back to this page." : "Scan the QR code with the Varial app (or another Stellar wallet app) and approve the connection.")
             : `Approve the connection request in ${md.wallet}. MileVault only asks for your public address.`
             : `Approve the sign-in message in ${walletKind(md.wallet) === "app" ? "the Varial app" : md.wallet}. It proves this wallet is yours; it can’t move funds and is never sent to the network.`}
@@ -91,7 +90,7 @@ function ModalBody({ md }: { md: Modal }) {
         {md.step === "address" && md.wallet === "Varial" && <Note icon="info">Set Varial to Testnet first ({walletKind(md.wallet) === "app" ? "in the app: Settings → Network" : "Varial → Settings → Network"}). MileVault runs on Stellar Testnet.</Note>}
         <Foot>
           <FB onClick={() => ui.open({ t: "connect" })}>Choose another wallet</FB>
-          {walletKind(md.wallet) === "app" && (md.step === "address" || md.requested) && <FB v="pri" onClick={() => openWalletApp(md.wallet, { pairing: md.step === "address" })}>Open {md.wallet}</FB>}
+          {walletKind(md.wallet) === "app" && md.requested && <FB v="pri" onClick={() => openWalletApp(md.wallet)}>Open {md.wallet}</FB>}
         </Foot>
       </HeroDlg>);
     case "connDeclined": return (

@@ -78,7 +78,7 @@ export async function walletChoices(): Promise<{ mobile: boolean; list: WalletCh
     if (inFreighterApp && wc) return { mobile, list: [pick("Varial", true, "You’re in the Varial app")] };
     const hana = await avail("Hana"); // Hana's in-app browser injects its wallet
     const list = [
-      ...(wc ? [pick("Varial", true, "Opens the Varial app · formerly Freighter")] : []),
+      ...(wc ? [pick("Varial", true, "Connects with WalletConnect · formerly Freighter")] : []),
       ...(hana && !mock ? [pick("Hana", true, "Detected in this browser")] : []),
       pick("Albedo", true, "Web wallet · works in this browser"),
       pick("xBull", true, "Web wallet · works in this browser"),
@@ -105,39 +105,20 @@ const mods: Record<string, KitModule> = {};
 let kitReady: Promise<typeof import("@creit.tech/stellar-wallets-kit")> | null = null;
 /** Set right before connecting Varial on a phone: the next WalletConnect URI opens the Varial app */
 let deepLinkNext: string | null = null;
-let quietPairing = false;
 /** The latest pairing link, so "Open Varial" can resend it if the first switch didn't happen */
 let lastPairingUri: string | null = null;
 
-/* ---------- phone: pair ahead of the tap ----------
- * Phone browsers only let a page open another app inside a user tap (a few seconds at most).
- * Loading the kit and WalletConnect takes longer than that on a phone, so the pairing link is
- * prepared as soon as the wallet picker opens, and the tap opens Varial synchronously. */
-type WcSession = { topic: string; namespaces: Record<string, { accounts: string[] }> };
-let prepared: { uri: string; approval: () => Promise<WcSession>; at: number } | null = null;
-let preparing: Promise<void> | null = null;
-const WC_METHODS = ["stellar_signXDR", "stellar_signAndSubmitXDR", "stellar_signMessage", "stellar_signAuthEntry"];
+/* ---------- phone: WalletConnect ----------
+ * On a phone, Varial connects through the WalletConnect window (Reown AppKit): the user picks
+ * Varial there and AppKit hands off to the app with its own registry deep link. We only warm the
+ * kit and the relay up when the picker opens, so that window appears without delay. */
 export function preparePhonePairing() {
   if (mock || !env.walletConnectProjectId || !device().mobile) return;
-  if (prepared && Date.now() - prepared.at < 4 * 60_000) return; // proposals expire after 5 minutes
-  preparing ??= (async () => {
-    await kit(); await wcReady();
-    const client = (mods.wallet_connect as unknown as { signClient: { connect: (o: unknown) => Promise<{ uri?: string; approval: () => Promise<WcSession> }> } }).signClient;
-    quietPairing = true;
-    try {
-      const { uri, approval } = await client.connect({ optionalNamespaces: { stellar: { methods: WC_METHODS, chains: [MAINNET ? "stellar:pubnet" : "stellar:testnet"], events: [] } } });
-      if (uri) prepared = { uri, approval, at: Date.now() };
-    } finally { quietPairing = false; }
-  })().catch((e) => console.error("[MileVault] couldn’t prepare the WalletConnect pairing:", e)).finally(() => { preparing = null; });
+  void kit().then(() => wcReady()).catch((e) => console.error("[MileVault] couldn’t start WalletConnect:", e));
 }
-/** Call synchronously inside the tap: opens the wallet app with the prepared pairing link. */
-export function openAppForPairing(name: WalletName): boolean {
-  const o = resolve(name);
-  if (o.kind !== "app" || !o.deepLink || !prepared) return false;
-  lastPairingUri = prepared.uri;
-  window.location.href = appLink(o.deepLink, prepared.uri);
-  return true;
-}
+/** True when this wallet connects through the WalletConnect window on this device */
+export const usesWalletConnect = (name?: string | null) => resolve(name).module === "wallet_connect";
+
 /**
  * Call synchronously inside a tap: brings the wallet app forward so a pending request is waiting
  * there. While still pairing, it resends the pairing link.
@@ -186,7 +167,6 @@ function kit() {
       const modal = (mod as unknown as { modal: { open: (o?: { uri?: string }) => unknown } }).modal;
       const open = modal.open.bind(modal);
       modal.open = (o) => {
-        if (o?.uri && quietPairing) return; // pairing prepared in the background for a phone: no QR modal
         if (o?.uri) lastPairingUri = o.uri;
         if (o?.uri && deepLinkNext) { const link = appLink(deepLinkNext, o.uri); deepLinkNext = null; window.location.href = link; }
         return open(o);
@@ -224,20 +204,22 @@ export const wallet = {
     const opt = resolve(name);
     if (opt.kind === "extension" && !(await mods[opt.module]?.isAvailable().catch(() => false)))
       throw new WalletNotInstalled(name, opt.install);
-    if (opt.kind === "app" && prepared) {
-      const p = prepared; prepared = null;
-      try {
-        const session = await p.approval(); // resolves when the user approves in the wallet app
-        const address = session.namespaces.stellar!.accounts[0]!.split(":")[2]!;
-        const st = await import("@creit.tech/stellar-wallets-kit/state");
-        st.wcSessionPaths.value = [...st.wcSessionPaths.value, { publicKey: address, topic: session.topic }];
-        m.StellarWalletsKit.setWallet(opt.module); st.activeAddress.value = address;
-        return { address, networkPassphrase: null };
-      } catch (e) { throw declined(e); }
-    }
     try {
       m.StellarWalletsKit.setWallet(opt.module);
-      if (isWc(name)) { await wcReady(); deepLinkNext = device().mobile ? opt.deepLink ?? null : null; }
+      if (isWc(name)) {
+        await wcReady(); deepLinkNext = null;
+        // The kit opens the WalletConnect window; if the user closes it, treat that as cancelled.
+        const modal = (mods.wallet_connect as unknown as { modal: { subscribeState: (f: (s: { open: boolean }) => void) => () => void } }).modal;
+        let stop = () => {};
+        const closed = new Promise<never>((_, reject) => {
+          let seenOpen = false;
+          stop = modal.subscribeState((st) => { if (st.open) seenOpen = true; else if (seenOpen) reject(new WalletDeclined()); });
+        });
+        try {
+          const { address } = await Promise.race([m.StellarWalletsKit.fetchAddress(), closed]);
+          return { address, networkPassphrase: null }; // WalletConnect can't report the network
+        } finally { stop(); }
+      }
       const { address } = await m.StellarWalletsKit.fetchAddress();
       const net = await m.StellarWalletsKit.getNetwork().catch(() => null);
       return { address, networkPassphrase: net?.networkPassphrase ?? null };

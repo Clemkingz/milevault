@@ -6,7 +6,7 @@ import { useDemo } from "./demo";
 import { queryClient } from "./queries";
 import { useSession } from "./session";
 import { useUI } from "./ui";
-import { wallet, WalletDeclined, WalletNotInstalled, type WalletName } from "./wallet";
+import { usesWalletConnect, wallet, WalletDeclined, WalletNotInstalled, type WalletName } from "./wallet";
 
 /**
  * Connect + sign in (SEP-10): wallet shares its address → check its network matches the
@@ -18,6 +18,8 @@ export async function signIn(name: WalletName) {
   try {
     // Guide §5: compare the wallet's passphrase with GET /escrow/config before any signature
     const net = await queryClient.fetchQuery({ queryKey: ["escrow-config"], queryFn: api.escrow.config, staleTime: 10 * 60_000 });
+    // The WalletConnect window sits outside our dialog, which would block taps on it: step aside.
+    if (!mock && usesWalletConnect(name)) ui.close();
     const { address, networkPassphrase } = await wallet.connect(name, mock ? useDemo.getState().address : undefined);
     if (networkPassphrase && networkPassphrase !== net.networkPassphrase) {
       ui.open({ t: "wrongNetwork", wallet: name, walletNetwork: networkPassphrase, required: net.network === "mainnet" ? "Stellar Mainnet" : "Stellar Testnet" });
