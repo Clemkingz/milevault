@@ -13,7 +13,7 @@ import { invalidateAll, useAgreement, useWalletOverview } from "@/lib/queries";
 import { usePrefs } from "@/lib/prefs";
 import { useSession } from "@/lib/session";
 import { useUI, type ConfirmOp } from "@/lib/ui";
-import { wallet, WalletDeclined, WalletMismatch } from "@/lib/wallet";
+import { openWalletApp, wallet, walletKind, WalletDeclined, WalletMismatch } from "@/lib/wallet";
 import { signOut } from "@/lib/auth";
 import { BallDlg, Burst, FB, Foot, Head, HeroDlg, WalletRow } from "./parts";
 
@@ -38,6 +38,7 @@ export function ActionDialog({ refId, kind, position }: { refId: string; kind: A
   const [fix, setFix] = useState<Fix>();
   const [cooldown, setCooldown] = useState(0);
   const [result, setResult] = useState<ChainAction>();
+  const [requested, setRequested] = useState(false);
   const router = useRouter();
   useEffect(() => { if (cooldown <= 0) return; const t = setTimeout(() => setCooldown((c) => c - 1), 1000); return () => clearTimeout(t); }, [cooldown]);
   const alive = useRef(true);
@@ -71,7 +72,8 @@ export function ActionDialog({ refId, kind, position }: { refId: string; kind: A
       setStep("wallet");
       const rows: [string, string][] = [["Agreement", `${a.name} · ${a.reference}`], ...(ms ? [["Milestone", `${ms.position} · ${ms.title}`] as [string, string]] : []), ...(p.amount ? [["Amount", money(p.amount, asset)] as [string, string]] : []), ["Network fee", FEE]];
       // Sign exactly what the backend prepared — never edit fee, memo or time bounds.
-      const signed = await wallet.sign(p.transaction, { networkPassphrase: p.networkPassphrase, address: me, purpose: "action", title, fn: ACTION_COPY[kind].fn, rows });
+      setRequested(false);
+      const signed = await wallet.sign(p.transaction, { networkPassphrase: p.networkPassphrase, address: me, purpose: "action", onRequested: () => alive.current && setRequested(true), title, fn: ACTION_COPY[kind].fn, rows });
       if (!alive.current) return;
       setStep("pending");
       let r = await api.escrow.submit(p.id, signed);
@@ -174,9 +176,9 @@ export function ActionDialog({ refId, kind, position }: { refId: string; kind: A
     </HeroDlg>);
   if (step === "wallet") return (
     <HeroDlg k="T-02">
-      <Head title="Check your wallet">Approve “{title}” in {walletName}. Nothing moves until you sign.</Head>
+      <Head title="Check your wallet">{walletKind(walletName) === "app" ? <>Open the {walletName} app and approve “{title}”, then come back here. Nothing moves until you sign.</> : <>Approve “{title}” in {walletName}. Nothing moves until you sign.</>}</Head>
       <WalletRow name={walletName} sub={<small>Waiting for your signature…</small>} right={<Icon name="loading" size={20} color="#2EBEF2" className="spin" />} active />
-      <Foot><FB onClick={close}>Cancel</FB><FB v="pri" loading>Waiting for signature</FB></Foot>
+      <Foot><FB onClick={close}>Cancel</FB>{walletKind(walletName) === "app" && requested ? <FB v="pri" onClick={() => openWalletApp(walletName)}>Open {walletName}</FB> : <FB v="pri" loading>{walletKind(walletName) === "app" ? "Sending to your wallet…" : "Waiting for signature"}</FB>}</Foot>
     </HeroDlg>);
   if (step === "pending") return (
     <HeroDlg k="T-03" closable={false} className="waiting">

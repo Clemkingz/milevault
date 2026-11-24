@@ -12,13 +12,13 @@ export type SignInResult = "ok" | "declined" | "wrong_network" | "error";
  * Operator sign-in = the same SEP-10 wallet auth as the dashboard. Whether the wallet is an
  * operator is decided by the backend: GET /admin/me answers 403 NOT_ADMIN otherwise.
  */
-export async function signIn(name: WalletName, demoAddress?: string): Promise<SignInResult> {
+export async function signIn(name: WalletName, demoAddress?: string, onSignRequested?: () => void): Promise<SignInResult> {
   try {
     const net = await api.escrow.config(); // compare passphrases before any signature (guide §5)
     const { address, networkPassphrase } = await wallet.connect(name, demoAddress);
     if (networkPassphrase && networkPassphrase !== net.networkPassphrase) return "wrong_network";
     const ch = await api.auth.challenge(address);
-    const signed = await wallet.sign(ch.transaction, { networkPassphrase: ch.networkPassphrase, address, purpose: "signin", wallet: name });
+    const signed = await wallet.sign(ch.transaction, { networkPassphrase: ch.networkPassphrase, address, purpose: "signin", wallet: name, onRequested: onSignRequested });
     const tok = await api.auth.verify(signed);
     queryClient.clear();
     useSession.getState().set({ token: tok.walletToken, address: tok.address, expiresAt: tok.expiresAt, walletId: name });

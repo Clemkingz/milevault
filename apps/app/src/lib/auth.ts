@@ -27,6 +27,7 @@ export async function signIn(name: WalletName) {
     const ch = await api.auth.challenge(address);
     const signed = await wallet.sign(ch.transaction, {
       networkPassphrase: ch.networkPassphrase, address, purpose: "signin", wallet: name, title: "Sign in to MileVault", fn: "web_auth",
+      onRequested: () => ui.open({ t: "connecting", wallet: name, step: "signin", requested: true }),
       rows: [["Website", ch.homeDomain], ["Moves funds", "No"], ["Valid until", new Date(ch.expiresAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })]],
     });
     const tok = await api.auth.verify(signed);

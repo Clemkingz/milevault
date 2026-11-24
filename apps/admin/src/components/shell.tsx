@@ -10,7 +10,7 @@ import { signIn, signOut, type SignInResult } from "@/lib/auth";
 import { api, mock } from "@/lib/backend";
 import { env } from "@/lib/env";
 import { useSession } from "@/lib/session";
-import { device, walletChoices, walletLabel, type WalletName } from "@/lib/wallet";
+import { device, openAppForPairing, openWalletApp, preparePhonePairing, walletChoices, walletKind, walletLabel, type WalletName } from "@/lib/wallet";
 
 const NAV: [string, string, IconName][] = [
   ["/overview", "Overview", "home"],
@@ -46,10 +46,11 @@ function Gate({ expired }: { expired: boolean }) {
   const [busy, setBusy] = useState<string | null>(null);
   const [warn, setWarn] = useState<string | null>(null);
   const [choices, setChoices] = useState<Awaited<ReturnType<typeof walletChoices>> | null>(null);
-  useEffect(() => { if (!mock) walletChoices().then(setChoices).catch(() => setChoices({ mobile: device().mobile, list: [] })); }, []);
+  const [signReq, setSignReq] = useState(false);
+  useEffect(() => { if (!mock) { preparePhonePairing(); walletChoices().then(setChoices).catch(() => setChoices({ mobile: device().mobile, list: [] })); } }, []);
   const go = async (key: string, name: WalletName, demo?: string) => {
-    setBusy(key); setWarn(null);
-    const r = await signIn(name, demo);
+    setBusy(key); setWarn(null); setSignReq(false);
+    const r = await signIn(name, demo, () => setSignReq(true));
     setBusy(null);
     if (r === "declined" || r === "wrong_network") setWarn(MSG[r]);
   };
@@ -69,10 +70,11 @@ function Gate({ expired }: { expired: boolean }) {
           {!choices ? <Button h={44} variant="sec" loading loadingText="Finding your wallets…">Finding your wallets…</Button>
             : choices.list.map(({ option: o, available, note }) => (
               <Button key={o.name} h={44} className="adm-wbtn" variant={available ? "sec" : "ghost"} loading={busy === o.name} loadingText="Check your wallet…" disabled={!!busy}
-                onClick={() => (available ? go(o.name, o.name) : o.install && window.open(o.install, "_blank", "noopener"))}>
+                onClick={() => { if (!available) { if (o.install) window.open(o.install, "_blank", "noopener"); return; } openAppForPairing(o.name); void go(o.name, o.name); }}>
                 <span className="adm-wopt"><b>{walletLabel(o.name, choices.mobile)}</b><small className={available ? (note.startsWith("Detected") ? "ok" : "") : "no"}>{available ? note : "Not installed · Install"}</small></span>
               </Button>
             ))}
+          {busy && walletKind(busy) === "app" && <Button h={40} onClick={() => openWalletApp(busy, { pairing: !signReq })}>{signReq ? `Open ${busy} to sign in` : `Open ${busy}`}</Button>}
           {choices?.footnote && <div className="adm-wfoot">{choices.footnote}</div>}
         </div>
       )}

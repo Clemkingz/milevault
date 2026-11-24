@@ -12,7 +12,7 @@ import { ListSkeleton } from "@/components/shell/skeleton";
 import { useActions } from "@/components/use-actions";
 import { addTrustline, fundWithFriendbot, getTestUsdc } from "@/lib/funding";
 import { useEscrowConfig, useNetwork, useWalletOverview } from "@/lib/queries";
-import { walletIcon, WalletDeclined } from "@/lib/wallet";
+import { openWalletApp, walletIcon, walletKind, WalletDeclined } from "@/lib/wallet";
 import { useSession } from "@/lib/session";
 import { useUI } from "@/lib/ui";
 
@@ -28,6 +28,7 @@ export function WalletsView() {
   const qc = useQueryClient();
   const { copy, explorer } = useActions();
   const [busy, setBusy] = useState<"xlm" | "trust" | "usdc" | null>(null);
+  const [trustReq, setTrustReq] = useState(false);
   const act = async (k: "xlm" | "trust" | "usdc", fn: () => Promise<unknown>, done: string) => {
     setBusy(k);
     try { const r = await fn(); if (r !== false) { toast(done); } await qc.invalidateQueries({ queryKey: ["wallet"] }); }
@@ -61,7 +62,8 @@ export function WalletsView() {
           )}
           {w.balancesAvailable && w.accountExists && !w.hasTrustline && (
             <div className="warnbox act"><Icon name="alert" size={16} /><span>This wallet can’t hold {code} yet. Enable {code} ({shortAddr(w.asset.split(":")[1] ?? "")} issuer) before funding or receiving payments. Your wallet signs it.</span>
-              <Button h={32} loading={busy === "trust"} loadingText="Check your wallet…" disabled={!cfg} onClick={() => act("trust", () => addTrustline(w.address, cfg!, net?.horizonUrl), `${code} enabled. This wallet can now hold ${code}.`)}>Enable {code}</Button></div>
+              <Button h={32} loading={busy === "trust"} loadingText="Check your wallet…" disabled={!cfg} onClick={() => act("trust", () => { setTrustReq(false); return addTrustline(w.address, cfg!, net?.horizonUrl, () => setTrustReq(true)); }, `${code} enabled. This wallet can now hold ${code}.`)}>Enable {code}</Button>
+              {busy === "trust" && trustReq && walletKind(walletName) === "app" && <Button h={32} variant="sec" onClick={() => openWalletApp(walletName)}>Open {walletName}</Button>}</div>
           )}
           {w.balancesAvailable && w.accountExists && w.xlmBalance !== null && Number(w.xlmBalance) < 1 && (
             <div className="warnbox"><Icon name="alert" size={16} /><span>Your XLM balance is low. Every signer pays its own small network fee, so add test XLM before signing.</span></div>

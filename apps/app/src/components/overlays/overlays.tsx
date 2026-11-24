@@ -12,7 +12,7 @@ import { signIn, signOut } from "@/lib/auth";
 import { env } from "@/lib/env";
 import { useSession } from "@/lib/session";
 import { useUI, type Modal } from "@/lib/ui";
-import { device, walletChoices, walletIcon, walletKind, walletLabel, WalletDeclined } from "@/lib/wallet";
+import { device, openAppForPairing, openWalletApp, preparePhonePairing, walletChoices, walletIcon, walletKind, walletLabel, WalletDeclined } from "@/lib/wallet";
 import { FB, Foot, Head, HeroDlg, WalletRow } from "./parts";
 import { ActionDialog, ConfirmDialog } from "./tx";
 
@@ -42,6 +42,7 @@ function WalletPicker({ sw }: { sw?: boolean }) {
   const [state, setState] = useState<Awaited<ReturnType<typeof walletChoices>> | null>(null);
   useEffect(() => {
     let on = true;
+    preparePhonePairing(); // phones: have the Varial pairing link ready before the tap
     walletChoices().then((r) => on && setState(r)).catch(() => on && setState({ mobile: device().mobile, list: [] }));
     return () => { on = false; };
   }, []);
@@ -57,7 +58,11 @@ function WalletPicker({ sw }: { sw?: boolean }) {
             <WalletRow key={o.name} name={o.name} label={walletLabel(o.name, mobile)} muted={!available}
               sub={<span className="wsub"><span className={`wstat${available ? (note.startsWith("Detected") || note.startsWith("You’re") ? " ok" : "") : " no"}`}>{note}</span>{i === 0 && available && o.name === "Varial" && <span className="rec">Recommended</span>}</span>}
               right={available ? <Icon name="right" size={20} /> : <span className="winst">Install<Icon name="external" size={14} /></span>}
-              onClick={() => (available ? void signIn(o.name) : o.install && window.open(o.install, "_blank", "noopener"))} />
+              onClick={() => {
+                if (!available) { if (o.install) window.open(o.install, "_blank", "noopener"); return; }
+                openAppForPairing(o.name); // must run inside the tap, before anything async
+                void signIn(o.name);
+              }} />
           ))}
       </div>
       {state?.footnote && <Note icon="info">{state.footnote}</Note>}
@@ -83,7 +88,10 @@ function ModalBody({ md }: { md: Modal }) {
             : `Approve the sign-in message in ${walletKind(md.wallet) === "app" ? "the Varial app" : md.wallet}. It proves this wallet is yours; it can’t move funds and is never sent to the network.`}
         </Head>
         <WalletRow name={md.wallet} sub={<small>{md.step === "address" ? "Waiting for approval…" : "Waiting for your signature…"}</small>} right={<Icon name="loading" size={20} color="#2EBEF2" className="spin" />} active />
-        <Foot><FB onClick={() => ui.open({ t: "connect" })}>Choose another wallet</FB></Foot>
+        <Foot>
+          <FB onClick={() => ui.open({ t: "connect" })}>Choose another wallet</FB>
+          {walletKind(md.wallet) === "app" && (md.step === "address" || md.requested) && <FB v="pri" onClick={() => openWalletApp(md.wallet, { pairing: md.step === "address" })}>Open {md.wallet}</FB>}
+        </Foot>
       </HeroDlg>);
     case "connDeclined": return (
       <HeroDlg k="W-05E" err>

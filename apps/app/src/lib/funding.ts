@@ -10,7 +10,7 @@ import { wallet } from "./wallet";
  * endpoint, so adding a trustline is the one transaction the frontend builds and submits itself.
  * Demo mode uses the mock backend's stand-ins instead of Stellar.
  */
-export async function addTrustline(address: string, config: EscrowConfig, horizonUrl = env.horizonUrl) {
+export async function addTrustline(address: string, config: EscrowConfig, horizonUrl = env.horizonUrl, onRequested?: () => void) {
   const [code, issuer] = config.asset.split(":");
   if (mock) {
     await wallet.sign(`MOCKTRUST.${address}`, { networkPassphrase: config.networkPassphrase, address, purpose: "action", title: `Enable ${code}`, fn: "change_trust", rows: [["Asset", `${code}`], ["Issuer", `${issuer!.slice(0, 4)}…${issuer!.slice(-4)}`], ["Network fee", "≈ 0.00001 XLM"]] });
@@ -23,7 +23,7 @@ export async function addTrustline(address: string, config: EscrowConfig, horizo
     .addOperation(Operation.changeTrust({ asset: new Asset(code!, issuer!) }))
     .setTimeout(120)
     .build();
-  const signed = await wallet.sign(tx.toXDR(), { networkPassphrase: config.networkPassphrase, address, purpose: "action", title: `Enable ${code}`, fn: "change_trust" });
+  const signed = await wallet.sign(tx.toXDR(), { networkPassphrase: config.networkPassphrase, address, purpose: "action", title: `Enable ${code}`, fn: "change_trust", onRequested });
   await server.submitTransaction(TransactionBuilder.fromXDR(signed, config.networkPassphrase));
 }
 

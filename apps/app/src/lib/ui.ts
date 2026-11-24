@@ -11,7 +11,7 @@ export interface WalletPromptReq { kind: "connect" | "sign"; wallet?: string; pu
 
 export type Modal =
   | { t: "connect"; sw?: boolean }
-  | { t: "connecting"; wallet: string; step: "address" | "signin" }
+  | { t: "connecting"; wallet: string; step: "address" | "signin"; requested?: boolean }
   | { t: "connDeclined"; wallet: string }
   | { t: "wrongNetwork"; wallet: string; walletNetwork: string; required: string }
   | { t: "connected"; wallet: string }
