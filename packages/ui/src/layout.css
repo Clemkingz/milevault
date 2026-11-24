@@ -127,7 +127,8 @@
   .kvs > div { flex-wrap: wrap; gap: 2px 12px; }
   .kvs b { text-align: left; }
   .dlg .foot { flex-direction: column-reverse; }
-  .dlg .foot .btn { width: 100%; }
+  /* Stacked buttons: no flex-grow (in a column it collapses them to text height); real touch height */
+  .dlg .foot .btn { width: 100%; flex: none; height: 48px; padding: 0 16px; font-size: 15px; }
   .avedit { flex-direction: column; align-items: flex-start; }
 }
 @media (max-width: 360px) {

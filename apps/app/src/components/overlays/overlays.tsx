@@ -88,6 +88,7 @@ function ModalBody({ md }: { md: Modal }) {
             : `Approve the sign-in message in ${walletKind(md.wallet) === "app" ? "the Varial app" : md.wallet}. It proves this wallet is yours; it can’t move funds and is never sent to the network.`}
         </Head>
         <WalletRow name={md.wallet} sub={<small>{md.step === "address" ? "Waiting for approval…" : "Waiting for your signature…"}</small>} right={<Icon name="loading" size={20} color="#2EBEF2" className="spin" />} active />
+        {md.step === "address" && md.wallet === "Varial" && <Note icon="info">Set Varial to Testnet first ({walletKind(md.wallet) === "app" ? "in the app: Settings → Network" : "Varial → Settings → Network"}). MileVault runs on Stellar Testnet.</Note>}
         <Foot>
           <FB onClick={() => ui.open({ t: "connect" })}>Choose another wallet</FB>
           {walletKind(md.wallet) === "app" && (md.step === "address" || md.requested) && <FB v="pri" onClick={() => openWalletApp(md.wallet, { pairing: md.step === "address" })}>Open {md.wallet}</FB>}
