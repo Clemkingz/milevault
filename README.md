@@ -40,7 +40,7 @@ No env files are needed for demo mode. See `.env.example` for live settings.
 
 ## Demo mode and live mode
 
-`NEXT_PUBLIC_DATA_SOURCE=mock` (the default) runs both apps against an in-browser mock of the API
+Without `NEXT_PUBLIC_API_URL` (or with `NEXT_PUBLIC_DATA_SOURCE=mock`), both apps run against an in-browser mock of the API
 (`packages/api/src/mock.ts`) with the same routes, shapes and error codes. Nothing leaves the browser.
 
 - **Dashboard** (`/app`): a simulated wallet popup signs everything. The **Demo** button
@@ -49,7 +49,7 @@ No env files are needed for demo mode. See `.env.example` for live settings.
   A brand-new wallet starts inactive, so you can try Friendbot, Enable USDC and the faucet.
 - **Admin** (`/admin`): **Sign in as demo operator**, or try a non-operator wallet to see the 403 state.
 
-Set `NEXT_PUBLIC_DATA_SOURCE=live` and `NEXT_PUBLIC_API_URL` to use the real API with a real wallet
+Set `NEXT_PUBLIC_API_URL` to use the real API with a real wallet. Next.js inlines `NEXT_PUBLIC_*` at build time, so restart `pnpm dev` or redeploy after changing it
 (Freighter, xBull, Albedo, LOBSTR or Hana on Testnet).
 
 ## Features

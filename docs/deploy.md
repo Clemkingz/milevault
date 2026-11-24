@@ -28,7 +28,7 @@ of these services started calling another from server code.
 | Variable | Needed for | Notes |
 |---|---|---|
 | `NEXT_PUBLIC_SITE_URL` | all | Public domain, e.g. `https://milevault.app`. Falls back to the Vercel URL |
-| `NEXT_PUBLIC_DATA_SOURCE` | app, admin | `mock` (default, in-browser demo backend) or `live` |
+| `NEXT_PUBLIC_DATA_SOURCE` | app, admin | Optional: `live` when `NEXT_PUBLIC_API_URL` is set, else `mock`. Set `mock` to force demo mode |
 | `NEXT_PUBLIC_API_URL` | app, admin | Backend URL, with or without `/api/v1`. Required for `live` |
 | `NEXT_PUBLIC_STELLAR_NETWORK` | app, admin | `testnet` (default) |
 

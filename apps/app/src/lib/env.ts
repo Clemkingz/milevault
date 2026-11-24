@@ -1,7 +1,8 @@
 /** Public runtime config. NEXT_PUBLIC_* values are inlined at build time. */
 export const env = {
   /** "mock" = in-browser mock backend (demo); "live" = the external MileVault API */
-  dataSource: (process.env.NEXT_PUBLIC_DATA_SOURCE ?? "mock") as "mock" | "live",
+  /** "live" whenever an API URL is configured, unless NEXT_PUBLIC_DATA_SOURCE says otherwise */
+  dataSource: (process.env.NEXT_PUBLIC_DATA_SOURCE || (process.env.NEXT_PUBLIC_API_URL ? "live" : "mock")) as "mock" | "live",
   /** Public landing domain (the app is served under it at /app). Falls back to Vercel's URL. */
   siteUrl: process.env.NEXT_PUBLIC_SITE_URL as string | undefined,
   network: process.env.NEXT_PUBLIC_STELLAR_NETWORK ?? "testnet",
