@@ -10,12 +10,16 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@milevault/shared": "workspace:*",
+    "@creit.tech/stellar-wallets-kit": "^2.8.0",
+    "@milevault/api": "workspace:*",
     "@milevault/ui": "workspace:*",
     "@radix-ui/react-dropdown-menu": "^2.1.0",
+    "@stellar/stellar-sdk": "^17.4.0",
+    "@tanstack/react-query": "^5.108.0",
     "next": "^16.4.6",
     "react": "^19.3.1",
-    "react-dom": "^19.3.1"
+    "react-dom": "^19.3.1",
+    "zustand": "^5.1.0"
   },
   "devDependencies": {
     "@milevault/tsconfig": "workspace:*",

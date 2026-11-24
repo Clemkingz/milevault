@@ -12,7 +12,7 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   basePath: "/admin",
-  transpilePackages: ["@milevault/ui", "@milevault/shared"],
+  transpilePackages: ["@milevault/ui", "@milevault/api"],
   poweredByHeader: false,
   async redirects() {
     return [{ source: "/", destination: "/admin/overview", basePath: false, permanent: false }];

@@ -21,7 +21,7 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
-  transpilePackages: ["@milevault/ui", "@milevault/shared"],
+  transpilePackages: ["@milevault/ui"],
   poweredByHeader: false,
   async rewrites() {
     if (onVercel) return [];

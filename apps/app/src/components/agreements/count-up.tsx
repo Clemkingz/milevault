@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { fmt } from "@/mock";
+import { fmtAmount } from "@milevault/api";
 
 /** Animated USDC figure — eases from the previous value to the new one (money moving). */
-export function CountUp({ value, suffix = " USDC", hidden }: { value: number; suffix?: string; hidden?: boolean }) {
-  const [shown, setShown] = useState(value);
-  const from = useRef(value);
+export function CountUp({ value, suffix = " USDC", hidden }: { value: number | string; suffix?: string; hidden?: boolean }) {
+  value = Number(value) || 0;
+  const [shown, setShown] = useState(Number(value) || 0);
+  const from = useRef(Number(value) || 0);
   useEffect(() => {
     const start = from.current, delta = value - start;
     if (!delta || window.matchMedia("(prefers-reduced-motion: reduce)").matches) { setShown(value); from.current = value; return; }
@@ -21,5 +22,5 @@ export function CountUp({ value, suffix = " USDC", hidden }: { value: number; su
     return () => cancelAnimationFrame(raf);
   }, [value]);
   if (hidden) return <>••••••</>;
-  return <>{fmt(shown)}{suffix}</>;
+  return <>{fmtAmount(shown)}{suffix}</>;
 }

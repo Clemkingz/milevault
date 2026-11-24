@@ -1,102 +1,77 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { ApiError, dayGroup, money, relTime, shortHash, type TxType } from "@milevault/api";
 import { Button, Icon, StatusBadge } from "@milevault/ui";
-import { Empty, PageHeader } from "@/components/bits";
-import { Menu, MenuItem } from "@/components/shell/menus";
+import { Empty, ErrorState, PageHeader, Pager } from "@/components/bits";
 import { Page } from "@/components/shell/page";
 import { ListSkeleton } from "@/components/shell/skeleton";
 import { useActions } from "@/components/use-actions";
-import { dayGroup, getPerson, relTime, shortHash, txType, usd, useActivity, useChain, useNow, useReady, useUI, type ActivityRow } from "@/mock";
+import { api } from "@/lib/backend";
+import { txLabel } from "@/lib/domain";
+import { useTransactions } from "@/lib/queries";
+import { useUI } from "@/lib/ui";
 
-type Kind = "all" | "fund" | "rel" | "ref" | "oth";
-const kindOf = (x: ActivityRow): Exclude<Kind, "all"> => (x.e.kind === "fund" ? "fund" : x.e.kind === "release" ? "rel" : x.e.kind === "refund" || x.e.kind === "decline" ? "ref" : "oth");
+const TAGS: [TxType, string][] = [["all", "All"], ["fund", "Funding"], ["release", "Releases"], ["refund", "Refunds"], ["other", "Other"]];
 
-/** PRD screen 5 — transaction history with explorer links (design txPage()) */
+/** GET /transactions (+ /transactions/export) */
 export function TransactionsView() {
-  const ready = useReady();
-  const me = useChain((s) => s.me)!;
-  const now = useNow();
-  const all = useActivity().filter((x) => x.e.hash);
-  const [f, setF] = useState<Kind>("all");
-  const [q, setQ] = useState("");
-  const [role, setRole] = useState<"all" | "client" | "contributor">("all");
-  const { explorer } = useActions();
-  const toast = useUI((s) => s.toast);
-  const search = useRef<HTMLInputElement>(null);
-  const isClientish = all.some((x) => x.a.client === me);
-
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") { e.preventDefault(); search.current?.focus(); } };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, []);
-
-  const items = useMemo(() => {
-    const s = q.trim().toLowerCase();
-    return all
-      .filter((x) => f === "all" || kindOf(x) === f)
-      .filter((x) => role === "all" || (role === "client" ? x.a.client === me : x.a.contributor === me))
-      .filter((x) => !s || x.a.name.toLowerCase().includes(s) || x.tsub.toLowerCase().includes(s) || getPerson(x.e.actor).addr.toLowerCase().includes(s) || x.e.hash!.includes(s));
-  }, [all, f, q, role, me]);
-  const groups = (["Today", "This week", "Earlier"] as const).map((g) => [g, items.filter((x) => dayGroup(x.e.at, now) === g)] as const).filter((g) => g[1].length);
-
+  const [type, setType] = useState<TxType>("all");
+  const [q, setQ] = useState(""); const [search, setSearch] = useState(""); const [page, setPage] = useState(1);
   const [exporting, setExporting] = useState(false);
+  const toast = useUI((s) => s.toast);
+  const { explorer } = useActions();
+  const input = useRef<HTMLInputElement>(null);
+  useEffect(() => { const t = setTimeout(() => { setSearch(q.trim()); setPage(1); }, 300); return () => clearTimeout(t); }, [q]);
+  useEffect(() => { const k = (e: KeyboardEvent) => { if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") { e.preventDefault(); input.current?.focus(); } }; window.addEventListener("keydown", k); return () => window.removeEventListener("keydown", k); }, []);
+  const { data, isPending, error, refetch, isFetching } = useTransactions({ type, search, page });
+
   const exportCsv = async () => {
     setExporting(true);
-    await new Promise((r) => setTimeout(r, 500));
-    const head = ["date", "type", "agreement", "agreement_id", "details", "amount_usdc", "status", "tx_hash"];
-    const lines = items.map((x) => [x.e.at, txType(x.e.kind, x.incoming)[0], x.a.name, `MV-${x.a.id}`, x.tsub, x.signed ?? "", "confirmed", x.e.hash].map((v) => `"${String(v).replace(/"/g, '""')}"`).join(","));
-    const blob = new Blob([[head.join(","), ...lines].join("\n")], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    Object.assign(document.createElement("a"), { href: url, download: `milevault-transactions-${new Date().toISOString().slice(0, 10)}.csv` }).click();
-    URL.revokeObjectURL(url);
-    setExporting(false);
-    toast(`Exported ${items.length} transactions`);
+    try {
+      const blob = await api.overview.exportCsv({ type, search: search || undefined });
+      const url = URL.createObjectURL(blob);
+      Object.assign(document.createElement("a"), { href: url, download: "milevault-transactions.csv" }).click();
+      URL.revokeObjectURL(url); toast("Transactions exported");
+    } catch (e) { toast(e instanceof ApiError ? e.message : "Export failed", { tone: "error" }); }
+    finally { setExporting(false); }
   };
 
-  if (!ready) return <Page><ListSkeleton title={150} /></Page>;
-  const tags: [Kind, string][] = [["all", "All"], ["fund", "Funding"], ["rel", isClientish ? "Releases" : "Payments"], ["ref", "Refunds"], ["oth", "Other"]];
-  const ROLE = { all: "All roles", client: "As client", contributor: "As contributor" } as const;
+  const items = data?.result ?? [];
+  const groups = (["Today", "This week", "Earlier"] as const).map((g) => [g, items.filter((x) => dayGroup(x.createdAt) === g)] as const).filter((g) => g[1].length);
 
   return (
     <Page>
-      <PageHeader title="Transactions" sub="Every on-chain movement on your agreements, with its Stellar transaction hash." actions={<Button variant="sec" h={40} icon="file" onClick={exportCsv} disabled={!items.length} loading={exporting} loadingText="Preparing…">Export CSV</Button>} />
-      <div className="toolbar">
-        <label className="search"><Icon name="search" size={16} /><input ref={search} value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search by name, address or hash" aria-label="Search transactions" /><span className="kbd">⌘K</span></label>
-        <Menu trigger={<button className="dd"><span>{ROLE[role]}</span><Icon name="down" size={18} /></button>}>
-          {(Object.keys(ROLE) as (keyof typeof ROLE)[]).map((k) => <MenuItem key={k} icon={k === role ? "check" : "user"} onSelect={() => setRole(k)}>{ROLE[k]}</MenuItem>)}
-        </Menu>
-      </div>
-      <div className="filters" role="tablist" aria-label="Filter transactions">
-        {tags.map(([k, l]) => (
-          <button key={k} role="tab" aria-selected={f === k} className={`tag${f === k ? " on" : ""}`} onClick={() => setF(k)}>
-            <b>{l}</b><small>{k === "all" ? all.length : all.filter((x) => kindOf(x) === k).length}</small>
-          </button>
-        ))}
-      </div>
-      {groups.length ? groups.map(([g, list]) => (
-        <div key={g} style={{ display: "contents" }}>
-          <div className="tgroup">{g}</div>
-          <div className="card rows tx mv-list">
-            {list.map((x) => {
-              const [lab, i, c, b] = txType(x.e.kind, x.incoming);
-              const amt = x.signed !== undefined ? `${x.signed > 0 ? "+" : "−"}${usd(Math.abs(x.signed))}` : "—";
-              return (
-                <div className="row" key={x.e.id}>
-                  <span className="typ" style={{ background: b }}><Icon name={i} size={18} color={c} /></span>
-                  <div className="tx"><b>{lab}</b><small>{x.tsub}</small></div>
-                  <div className="rc w-m"><span className="amt">{amt}</span><StatusBadge status="confirmed" /></div>
-                  <span className="amt w-d" style={x.signed && x.signed > 0 ? { color: "#00A84B" } : undefined}>{amt}</span>
-                  <div className="bcol w-d"><StatusBadge status="confirmed" /></div>
-                  <span className="when w-d">{relTime(x.e.at, now)}</span>
-                  <button className="txh w-d" onClick={() => explorer(x.e.hash!)}>{shortHash(x.e.hash!)}<Icon name="external" size={14} /></button>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )) : <Empty k={all.length ? "E-03" : "T-05"} title={all.length ? "No transactions here" : "No transactions yet"} body={all.length ? "Try another filter or search term." : "Create, fund, release and refund transactions appear here with their Stellar hash."} />}
+      <PageHeader title="Transactions" sub="Verified on-chain transactions on your agreements, each with its Stellar hash." actions={<Button variant="sec" h={40} icon="file" onClick={exportCsv} loading={exporting} loadingText="Preparing…" disabled={!items.length && !exporting}>Export CSV</Button>} />
+      <div className="toolbar"><label className="search"><Icon name={isFetching && !isPending ? "loading" : "search"} size={16} className={isFetching && !isPending ? "spin" : undefined} /><input ref={input} value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search agreement, reference or hash" aria-label="Search transactions" /><span className="kbd">⌘K</span></label></div>
+      <div className="filters" role="tablist">{TAGS.map(([k, l]) => <button key={k} role="tab" aria-selected={type === k} className={`tag${type === k ? " on" : ""}`} onClick={() => { setType(k); setPage(1); }}><b>{l}</b>{type === k && data && <small>{data.paginationMeta.totalCount}</small>}</button>)}</div>
+      {isPending ? <ListSkeleton title={0} /> : error ? <ErrorState error={error} retry={() => refetch()} /> : groups.length ? (
+        <>
+          {groups.map(([g, list]) => (
+            <div key={g} style={{ display: "contents" }}>
+              <div className="tgroup">{g}</div>
+              <div className="card rows tx mv-list">
+                {list.map((x) => {
+                  const t = txLabel(x); const [ic, c, b] = t.icon; const h = x.txHash;
+                  const amt = x.amount ? `${t.sign > 0 ? "+" : t.sign < 0 ? "−" : ""}${money(x.amount, x.asset)}` : "—";
+                  return (
+                    <div className="row" key={x.id}>
+                      <span className="typ" style={{ background: b }}><Icon name={ic} size={18} color={c} /></span>
+                      <div className="tx"><b>{t.label}</b><small>{x.agreementName} · {x.reference}{x.milestonePosition ? ` · ${x.milestoneTitle ?? `Milestone ${x.milestonePosition}`}` : ""}</small></div>
+                      <div className="rc w-m"><span className="amt">{amt}</span><StatusBadge status="confirmed" /></div>
+                      <span className="amt w-d" style={t.sign > 0 ? { color: "#00A84B" } : undefined}>{amt}</span>
+                      <div className="bcol w-d"><StatusBadge status="confirmed" /></div>
+                      <span className="when w-d">{relTime(x.createdAt)}</span>
+                      {h ? <button className="txh w-d" onClick={() => explorer(h)}>{shortHash(h)}<Icon name="external" size={14} /></button> : <span className="when w-d">—</span>}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+          <Pager meta={data!.paginationMeta} page={page} onPage={setPage} />
+        </>
+      ) : <Empty k={search || type !== "all" ? "E-03" : "T-05"} title={search || type !== "all" ? "No transactions here" : "No transactions yet"} body={search || type !== "all" ? "Try another filter or search term." : "Funding, approvals, releases and refunds appear here once they’re confirmed on Stellar."} />}
     </Page>
   );
 }

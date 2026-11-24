@@ -156,3 +156,4 @@ svg.i { display: block; flex: none; }
 
 /* Success / confirmation pages stay focused */
 .created { max-width: 640px; width: 100%; margin: 0 auto; }
+.ovl.ext-only { background: rgb(0 0 0 / .12); }

@@ -4,11 +4,5 @@ import { Modals, RedirectWatcher } from "./overlays";
 import { Toaster } from "./toaster";
 
 export function Overlays() {
-  return (
-    <>
-      <Modals />
-      <Toaster />
-      <RedirectWatcher />
-    </>
-  );
+  return (<><Modals /><Toaster /><RedirectWatcher /></>);
 }

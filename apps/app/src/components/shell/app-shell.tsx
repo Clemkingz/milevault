@@ -1,43 +1,49 @@
 "use client";
 
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
+import { VaultLoader } from "@milevault/ui";
 import { env } from "@/lib/env";
-import { bootMock, useChain, useHydrated, useMe } from "@/mock";
+import { usePrefs } from "@/lib/prefs";
+import { useSessionCheck } from "@/lib/queries";
+import { isExpired, useSession } from "@/lib/session";
 import { ConnectGate } from "./gate";
 import { DemoPanel } from "./demo-panel";
 import { TabBar } from "./mobile";
 import { Sidebar } from "./sidebar";
-import { VaultLoader } from "@milevault/ui";
 
-export function useBoot() {
-  useEffect(() => { bootMock(); registerSW(); }, []);
-  return useHydrated();
+/** Client mount flag (persisted stores rehydrate from localStorage on the client) */
+export function useMounted() {
+  const [m, setM] = useState(false);
+  useEffect(() => setM(true), []);
+  return m;
 }
 
-/** Service worker for the installable app (production builds; opt in locally with NEXT_PUBLIC_PWA_DEV=1) */
 function registerSW() {
   if (typeof navigator === "undefined" || !("serviceWorker" in navigator)) return;
   if (process.env.NODE_ENV !== "production" && process.env.NEXT_PUBLIC_PWA_DEV !== "1") return;
   navigator.serviceWorker.register("/app/sw.js", { scope: "/app/" }).catch(() => undefined);
 }
 
-/** Reflect user preferences on <html> so every screen (and portals) honours them */
 function usePrefsClasses() {
-  const prefs = useChain((s) => s.prefs);
+  const compact = usePrefs((s) => s.compact), reduce = usePrefs((s) => s.reduceMotion);
   useEffect(() => {
-    const el = document.documentElement;
-    el.classList.toggle("compact", prefs.compact);
-    el.classList.toggle("reduce-motion", prefs.reduceMotion);
-  }, [prefs]);
+    document.documentElement.classList.toggle("compact", compact);
+    document.documentElement.classList.toggle("reduce-motion", reduce);
+  }, [compact, reduce]);
 }
 
-/** Authenticated app frame: sidebar (desktop) / tab bar (mobile) around the page */
+/** Authenticated frame. Restores the wallet session (GET /wallet-auth/session) or shows the gate. */
 export function AppShell({ children }: { children: ReactNode }) {
-  const hydrated = useBoot();
-  const me = useMe();
+  const mounted = useMounted();
+  const token = useSession((s) => s.token);
+  const expiresAt = useSession((s) => s.expiresAt);
+  const check = useSessionCheck();
   usePrefsClasses();
-  if (!hydrated) return <VaultLoader fullscreen />;
-  if (!me) return (<><ConnectGate />{env.dataSource === "mock" && <DemoPanel />}</>);
+  useEffect(() => { registerSW(); }, []);
+  useEffect(() => { if (token && isExpired(expiresAt)) useSession.getState().expire(); }, [token, expiresAt]);
+
+  if (!mounted || (token && check.isPending)) return <VaultLoader fullscreen label={token ? "Restoring your session" : undefined} />;
+  if (!token) return <>{<ConnectGate />}{env.dataSource === "mock" && <DemoPanel />}</>;
   return (
     <div className="app">
       <a href="#main" className="skip">Skip to content</a>

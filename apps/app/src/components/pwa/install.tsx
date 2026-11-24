@@ -3,7 +3,8 @@
 import { useSyncExternalStore } from "react";
 import { Button, Icon } from "@milevault/ui";
 import { imgUrl } from "../art";
-import { useChain, useUI } from "@/mock";
+import { usePrefs } from "@/lib/prefs";
+import { useUI } from "@/lib/ui";
 
 type BIPEvent = Event & { prompt: () => Promise<void>; userChoice: Promise<{ outcome: "accepted" | "dismissed" }> };
 
@@ -48,8 +49,8 @@ export function usePwa() {
 /** "Install MileVault" — sidebar promo (design promo card) or settings card. */
 export function InstallCard({ variant = "side" }: { variant?: "side" | "card" }) {
   const { ssr, isInstalled, install } = usePwa();
-  const dismissed = useChain((s) => s.installDismissed);
-  const set = useChain((s) => s.set);
+  const dismissed = usePrefs((s) => s.installDismissed);
+  const set = usePrefs((s) => s.set);
   if (ssr) return null;
   if (variant === "card")
     return (

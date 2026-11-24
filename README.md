@@ -1,11 +1,12 @@
 # MileVault
 
-Milestone-based escrow payments on Stellar (Soroban). Clients lock testnet USDC in a smart contract,
-and contributors are paid milestone by milestone as the client approves and releases each one.
+Milestone-based escrow payments on Stellar. Clients lock test USDC in escrow on Stellar (one claimable
+balance per milestone), and contributors are paid milestone by milestone as the client approves and
+releases each one.
 
-> MVP on **Stellar Testnet**, using test assets only. This repository is the **frontend**: the
-> MileVault backend and the Soroban escrow contract are maintained separately (`NEXT_PUBLIC_API_URL`,
-> `NEXT_PUBLIC_ESCROW_CONTRACT_ID`).
+> MVP on **Stellar Testnet**, using test assets only. This repository is the **frontend**. The
+> MileVault API is a separate service (`NEXT_PUBLIC_API_URL`); its contract is
+> [docs/FRONTEND_INTEGRATION.md](docs/FRONTEND_INTEGRATION.md).
 
 ## Repository layout
 
@@ -15,7 +16,7 @@ apps/
   app/        Client & contributor dashboard (basePath /app)  → /app, /a/* dev :3001
   admin/      Operator console (basePath /admin)              → /admin    dev :3002
 packages/
-  shared/     Status enums, types, zod schemas, amount helpers
+  api/        Typed API client, formatting + address helpers, demo-mode mock backend
   ui/         Design system: tokens, prototype styles, layout, motion, icons, components
   tsconfig/   Shared TS configs
 docs/         Architecture, deploy guide, design prototypes + alignment notes
@@ -37,28 +38,32 @@ The landing proxies `/app`, `/a/*` and `/admin` to the other dev servers, so eve
 port 3000 (same routing as production). `vercel dev` runs the real Vercel routing instead.
 No env files are needed for demo mode. See `.env.example` for live settings.
 
-## Demo mode (mock data)
+## Demo mode and live mode
 
-Until the backend and contract are connected, the dashboard and admin console run on **mock data**:
+`NEXT_PUBLIC_DATA_SOURCE=mock` (the default) runs both apps against an in-browser mock of the API
+(`packages/api/src/mock.ts`) with the same routes, shapes and error codes. Nothing leaves the browser.
 
-- **Dashboard** (`/app`): an in-browser mock chain (`apps/app/src/mock`) with a simulated wallet popup.
-  Every contract rule is enforced there. Use the **Demo** button (bottom-right) to switch between
-  **Aryan (client)** and **Kay (contributor)**, play the other side's next step, force a failed
-  transaction or wrong network, or reset the data. State persists in `localStorage`.
-- **Admin** (`/admin`): sample platform data. Click **Continue as demo operator** to sign in.
+- **Dashboard** (`/app`): a simulated wallet popup signs everything. The **Demo** button
+  (bottom-right) switches between the client and contributor wallets, plays the other side's next
+  step, forces a failed transaction or wrong network, sets the network latency, or resets the data.
+  A brand-new wallet starts inactive, so you can try Friendbot, Enable USDC and the faucet.
+- **Admin** (`/admin`): **Sign in as demo operator**, or try a non-operator wallet to see the 403 state.
 
-Set `NEXT_PUBLIC_DATA_SOURCE=live` and `NEXT_PUBLIC_API_URL` to switch to the real backend.
+Set `NEXT_PUBLIC_DATA_SOURCE=live` and `NEXT_PUBLIC_API_URL` to use the real API with a real wallet
+(Freighter, xBull, Albedo, LOBSTR or Hana on Testnet).
 
 ## Features
 
-- **Dashboard**: create → fund → accept → submit → approve → release, mutual cancellation, decline,
-  transaction history with explorer links, wallets, **profile & settings** (name, photo, preferences).
-- **Admin console**: platform KPIs, agreements needing attention, all agreements, wallets (with
-  review flags), on-chain events, and system health (Soroban RPC + backend checks).
-- **Installable app (PWA)** for the dashboard: manifest, icons, service worker with offline screen
-  (production builds; `NEXT_PUBLIC_PWA_DEV=1` to test locally).
-- **Layout**: 264px sidebar (76px icon rail at 1024–1279px, tab bar below 1024px), content up to
-  1200px, responsive down to 280px wide.
+- **Dashboard**: SEP-10 wallet sign-in; drafts with autosave → publish → fund → accept → submit →
+  request changes / approve → release; decline; mutual cancellation (propose, confirm, reject,
+  withdraw); recovery after the recovery date; wallet readiness (activate with Friendbot, Enable USDC,
+  test USDC); transactions with CSV export; notifications; share links (`/a/MV-1042`).
+- **Admin console**: overview totals, agreements (status filter, search, detail), on-chain
+  transactions (status/kind/stuck filters, Re-check), wallets, system health (database, Redis,
+  Horizon, arbiter, indexer) with **Run indexer**. Read-only otherwise, as the API is.
+- **Installable app (PWA)** for the dashboard (production builds; `NEXT_PUBLIC_PWA_DEV=1` locally).
+- **Layout**: 264px sidebar (76px icon rail at 1024–1279px, tab bar below 1024px), responsive down to
+  280px wide.
 
 ## Deploy
 

@@ -4,14 +4,14 @@ import "./globals.css";
 import { SITE_URL as SITE } from "@/lib/site";
 
 const DESCRIPTION =
-  "Lock test USDC in a Soroban escrow and release each payment when the work is approved. Milestone-based escrow for clients and contributors on Stellar — MileVault never holds your keys.";
+  "Lock test USDC in escrow on Stellar and release each payment when the work is approved. Milestone-based escrow for clients and contributors on Stellar — MileVault never holds your keys.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE),
   title: { default: "MileVault · Milestone escrow payments on Stellar", template: "%s · MileVault" },
   description: DESCRIPTION,
   applicationName: "MileVault",
-  keywords: ["milestone escrow", "Stellar", "Soroban", "smart contract escrow", "USDC", "freelance payments", "contributor payments", "Stellar Testnet"],
+  keywords: ["milestone escrow", "Stellar", "Stellar escrow", "claimable balances", "USDC", "freelance payments", "contributor payments", "Stellar Testnet"],
   authors: [{ name: "MileVault" }],
   creator: "MileVault",
   category: "finance",

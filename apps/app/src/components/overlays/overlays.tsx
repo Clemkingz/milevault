@@ -3,206 +3,138 @@
 import * as Dialog from "@radix-ui/react-dialog";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
+import { shortAddr } from "@milevault/api";
 import { Icon } from "@milevault/ui";
 import { KV, Note } from "../bits";
 import { imgUrl } from "../art";
-import { env } from "@/lib/env";
-import {
-  involves, locked, mid, getPerson, short, shortHash, total, usd, useChain, useUI, type Modal, type WalletId,
-} from "@/mock";
-import { FB, Foot, Head, HeroDlg, Burst, WalletRow } from "./parts";
-import { TxContent, txInfo } from "./tx";
 import { usePwa } from "../pwa/install";
-
-const WALLETS: WalletId[] = ["Freighter", "xBull", "Albedo", "LOBSTR", "Hana"];
-
-function ModalBody({ md }: { md: Modal }) {
-  const ui = useUI.getState();
-  const me = useChain((s) => s.me);
-  const agreements = useChain((s) => s.agreements);
-  const afterConnect = useUI((s) => s.afterConnect);
-  const router = useRouter();
-  const meP = me ? getPerson(me) : getPerson(useChain.getState().persona);
-
-  switch (md.t) {
-    case "connect":
-      return (
-        <HeroDlg k="W-01">
-          <Head title={md.sw ? "Switch wallet" : "Connect a wallet"}>Pick a Stellar wallet. You’ll approve the connection in the wallet itself.</Head>
-          <div className="wlist mv-list">
-            {WALLETS.map((w, i) => (
-              <WalletRow key={w} name={w} sub={i === 0 ? <span className="rec">Recommended</span> : undefined} right={<Icon name="right" size={20} />} onClick={() => ui.pickWallet(w)} />
-            ))}
-          </div>
-          <Note icon="lock">MileVault only reads your public address. We never see your keys.</Note>
-        </HeroDlg>
-      );
-    case "connecting":
-      return (
-        <HeroDlg k="W-02" className="waiting">
-          <Head title={`Waiting for ${md.w}`}>Approve the connection request in {md.w}. MileVault only asks for your public address.</Head>
-          <WalletRow name={md.w} sub={<small>Waiting for approval…</small>} right={<Icon name="loading" size={20} color="#2EBEF2" className="spin" />} active />
-          <Foot>
-            <FB onClick={() => ui.open({ t: "connect" })}>Choose another wallet</FB>
-            {env.dataSource === "mock" && <FB onClick={ui.walletDecline}>Simulate decline</FB>}
-          </Foot>
-        </HeroDlg>
-      );
-    case "connDeclined":
-      return (
-        <HeroDlg k="W-05E" err>
-          <Head title="Connection declined">You declined the request in {md.w}. Nothing was shared and nothing changed.</Head>
-          <Foot><FB onClick={() => ui.open({ t: "connect" })}>Choose another wallet</FB><FB v="pri" onClick={() => ui.pickWallet(md.w)}>Try again</FB></Foot>
-        </HeroDlg>
-      );
-    case "wrongNetwork":
-      return (
-        <HeroDlg k="W-08" err>
-          <Head title={`Switch ${md.w} to Testnet`}>MileVault runs on Stellar Testnet. Your wallet is on Mainnet, so we didn’t connect it. Switch the network in {md.w}, then try again.</Head>
-          <KV rows={[["Wallet network", "Public (Mainnet)"], ["MileVault needs", "Stellar Testnet"]]} />
-          <Foot>
-            <FB onClick={ui.close}>Cancel</FB>
-            <FB v="pri" onClick={() => { useChain.getState().setDemo({ wrongNetwork: false }); ui.pickWallet(md.w); }}>I’ve switched</FB>
-          </Foot>
-        </HeroDlg>
-      );
-    case "connected": {
-      const target = afterConnect ? agreements.find((a) => `/agreements/${a.id}` === afterConnect) : undefined;
-      return (
-        <HeroDlg k="W-03">
-          <Head title="Wallet connected">{md.w} is connected on Stellar Testnet. You can disconnect any time from Wallets.</Head>
-          <KV rows={[["Account", `${meP.name} · ${short(meP.addr)}`], ["Network", "Stellar Testnet"], ["Agreements found", String(agreements.filter((a) => me && involves(a, me)).length)]]} />
-          <Foot>
-            <FB v="pri" onClick={() => { ui.close(); router.push(afterConnect ?? "/dashboard"); ui.setAfterConnect(null); }}>
-              {target ? `Open ${target.name}` : "Go to dashboard"}
-            </FB>
-          </Foot>
-        </HeroDlg>
-      );
-    }
-    case "disconnect": {
-      const wallet = useChain.getState().wallet ?? "wallet";
-      return (
-        <HeroDlg k="W-10">
-          <Head title={`Disconnect ${wallet}?`}>Your agreements and escrow stay exactly as they are. Connect again any time to pick up where you left off.</Head>
-          <Foot>
-            <FB onClick={ui.close}>Cancel</FB>
-            <FB v="danger" onClick={() => { useChain.getState().disconnect(); ui.close(); ui.toast("Wallet disconnected. Nothing was signed."); window.location.assign(env.landingUrl); }}>Disconnect</FB>
-          </Foot>
-        </HeroDlg>
-      );
-    }
-    case "install":
-      return <InstallDialog />;
-    case "received": {
-      const a = agreements.find((x) => x.id === md.id)!;
-      const m = a.ms[md.i]!;
-      const done = a.status === "completed";
-      const cl = getPerson(a.client);
-      const bal = useChain.getState().balances[me!].usdc;
-      return (
-        <HeroDlg k={done ? "M-07" : "M-06"}>
-          <Burst />
-          <Head title={done ? "Paid in full" : `You received ${usd(m.amount)}`}>
-            {done ? `${cl.first} released the last milestone. You’ve received ${usd(total(a))} for ${a.name}.` : `${cl.first} released the payment for ${m.title}. It’s in your wallet now.`}
-          </Head>
-          <KV rows={[["Amount", usd(m.amount)], ["Still locked for you", usd(locked(a))], ["Wallet balance", usd(bal)], ["Transaction", shortHash(m.releaseHash ?? ""), m.releaseHash]]} />
-          <Foot><FB v="pri" onClick={ui.close}>Done</FB></Foot>
-        </HeroDlg>
-      );
-    }
-    case "tx":
-      return <TxContent md={md} />;
-  }
-}
+import { signIn, signOut } from "@/lib/auth";
+import { env } from "@/lib/env";
+import { useSession } from "@/lib/session";
+import { useUI, type Modal } from "@/lib/ui";
+import { WALLETS, WalletDeclined } from "@/lib/wallet";
+import { FB, Foot, Head, HeroDlg, WalletRow } from "./parts";
+import { ActionDialog, ConfirmDialog } from "./tx";
 
 function InstallDialog() {
   const { platform } = usePwa();
-  const steps: Record<string, [string, string][]> = {
-    ios: [["1", "Tap the Share button in Safari’s toolbar"], ["2", "Scroll and choose “Add to Home Screen”"], ["3", "Tap Add — MileVault opens like an app"]],
-    "safari-mac": [["1", "In Safari, open the File menu (or Share)"], ["2", "Choose “Add to Dock…”"], ["3", "Click Add — MileVault opens in its own window"]],
-    android: [["1", "Open your browser menu (⋮)"], ["2", "Tap “Install app” or “Add to Home screen”"], ["3", "Confirm — it lands on your home screen"]],
-    desktop: [["1", "Look for the install icon at the right of the address bar"], ["2", "Or open the browser menu → “Install MileVault…”"], ["3", "Confirm — it opens in its own window"]],
+  const steps: Record<string, string[]> = {
+    ios: ["Tap the Share button in Safari’s toolbar", "Choose “Add to Home Screen”", "Tap Add — MileVault opens like an app"],
+    "safari-mac": ["In Safari, open the File menu (or Share)", "Choose “Add to Dock…”", "Click Add — MileVault opens in its own window"],
+    android: ["Open your browser menu (⋮)", "Tap “Install app” or “Add to Home screen”", "Confirm — it lands on your home screen"],
+    desktop: ["Look for the install icon at the right of the address bar", "Or open the browser menu → “Install MileVault…”", "Confirm — it opens in its own window"],
   };
   return (
     <HeroDlg k="W-08">
-      <Head title="Install MileVault">Get MileVault on your {platform === "ios" || platform === "android" ? "home screen" : "dock or desktop"}. It opens in its own window, loads instantly and shows an offline screen when you lose connection.</Head>
-      <ol className="isteps">{steps[platform]!.map(([n, t]) => <li key={n}><span className="seq">{n}</span>{t}</li>)}</ol>
+      <Head title="Install MileVault">It opens in its own window, loads instantly and shows an offline screen when you lose connection.</Head>
+      <ol className="isteps">{steps[platform]!.map((t, i) => <li key={i}><span className="seq">{i + 1}</span>{t}</li>)}</ol>
       <Note icon="lock">Installing doesn’t change anything about your wallet or keys.</Note>
       <Foot><FB v="pri" onClick={useUI.getState().close}>Got it</FB></Foot>
     </HeroDlg>
   );
 }
 
-/** All dialogs (Radix Dialog → focus trap, Escape, scroll lock) styled as the design `.ovl/.dlg` */
+function ModalBody({ md }: { md: Modal }) {
+  const ui = useUI.getState();
+  const router = useRouter();
+  const afterConnect = useUI((s) => s.afterConnect);
+  const short = useSession((s) => s.shortAddress);
+  switch (md.t) {
+    case "connect": return (
+      <HeroDlg k="W-01">
+        <Head title={md.sw ? "Switch wallet" : "Connect a wallet"}>Pick a Stellar wallet. You’ll approve the connection, then one sign-in message — it moves no funds.</Head>
+        <div className="wlist mv-list">
+          {WALLETS.map((w, i) => <WalletRow key={w.name} name={w.name} sub={i === 0 ? <span className="rec">Recommended</span> : undefined} right={<Icon name="right" size={20} />} onClick={() => void signIn(w.name)} />)}
+        </div>
+        <Note icon="lock">MileVault only reads your public address. We never see your keys.</Note>
+      </HeroDlg>);
+    case "connecting": return (
+      <HeroDlg k={md.step === "address" ? "W-02" : "T-02"} className="waiting">
+        <Head title={md.step === "address" ? `Waiting for ${md.wallet}` : "Sign in to MileVault"}>
+          {md.step === "address" ? `Approve the connection request in ${md.wallet}. MileVault only asks for your public address.` : `Approve the sign-in message in ${md.wallet}. It proves this wallet is yours; it can’t move funds and is never sent to the network.`}
+        </Head>
+        <WalletRow name={md.wallet} sub={<small>{md.step === "address" ? "Waiting for approval…" : "Waiting for your signature…"}</small>} right={<Icon name="loading" size={20} color="#2EBEF2" className="spin" />} active />
+        <Foot><FB onClick={() => ui.open({ t: "connect" })}>Choose another wallet</FB></Foot>
+      </HeroDlg>);
+    case "connDeclined": return (
+      <HeroDlg k="W-05E" err>
+        <Head title="Connection declined">You declined the request in {md.wallet}. Nothing was shared and nothing changed.</Head>
+        <Foot><FB onClick={() => ui.open({ t: "connect" })}>Choose another wallet</FB><FB v="pri" onClick={() => void signIn(md.wallet as never)}>Try again</FB></Foot>
+      </HeroDlg>);
+    case "wrongNetwork": return (
+      <HeroDlg k="W-08" err>
+        <Head title={`Switch ${md.wallet} to ${md.required.replace("Stellar ", "")}`}>MileVault runs on {md.required}. Your wallet is on a different network, so we didn’t ask it to sign anything. Switch networks in {md.wallet}, then try again.</Head>
+        <KV rows={[["Wallet network", md.walletNetwork.split(";")[0]!.trim()], ["MileVault needs", md.required]]} />
+        <Foot><FB onClick={ui.close}>Cancel</FB><FB v="pri" onClick={() => { ui.set({ demoWrongNetwork: false }); void signIn(md.wallet as never); }}>I’ve switched</FB></Foot>
+      </HeroDlg>);
+    case "connected": return (
+      <HeroDlg k="W-03">
+        <Head title="Signed in">{md.wallet} is connected on Stellar Testnet as {short}. Your session lasts 12 hours; you can disconnect any time.</Head>
+        <Foot><FB v="pri" onClick={() => { ui.close(); router.push(afterConnect ?? "/dashboard"); ui.setAfterConnect(null); }}>{afterConnect ? "Open agreement" : "Go to dashboard"}</FB></Foot>
+      </HeroDlg>);
+    case "disconnect": return (
+      <HeroDlg k="W-10">
+        <Head title="Disconnect your wallet?">This ends your MileVault session. Your agreements and escrow stay exactly as they are on Stellar.</Head>
+        <Foot><FB onClick={ui.close}>Cancel</FB><FB v="danger" onClick={async () => { ui.close(); await signOut(); window.location.assign(env.landingUrl); }}>Disconnect</FB></Foot>
+      </HeroDlg>);
+    case "install": return <InstallDialog />;
+    case "action": return <ActionDialog refId={md.ref} kind={md.kind} position={md.position} />;
+    case "confirm": return <ConfirmDialog op={md.op} refId={md.ref} position={md.position} />;
+  }
+}
+
+/** Simulated wallet popup — demo mode only (real wallets show their own UI) */
+function WalletPopup() {
+  const prompt = useUI((s) => s.prompt);
+  const wallet = useSession((s) => s.walletId) ?? (prompt?.wallet ?? "Freighter");
+  if (!prompt) return null;
+  const name = prompt.wallet ?? wallet;
+  return (
+    <>
+      <div className="ext" role="dialog" aria-label={`${name} request`}>
+        <div className="arrow" />
+        <div className="eh"><img src={imgUrl(`wl-${name.toLowerCase()}`)} alt="" /><div><b>{name}</b><small>{prompt.address ? shortAddr(prompt.address) : "Demo wallet"}</small></div><span className="net">Testnet</span></div>
+        <div className="eb">
+          <div className="site"><Icon name="lock" size={12} />milevault.app wants you to {prompt.kind === "connect" ? "connect" : "sign"}</div>
+          <h4>{prompt.kind === "connect" ? "Share your public address" : prompt.title}</h4>
+          {prompt.kind === "sign" && <div className="fn">{prompt.purpose === "signin" ? "Sign-in challenge · " : "Transaction · "}<code>{prompt.fn}</code></div>}
+          {prompt.rows && <KV rows={prompt.rows} />}
+          {prompt.kind === "connect" && <KV rows={[["Shares", "Public address only"], ["Network", "Testnet"]]} />}
+        </div>
+        <div className="ef"><button className="rj" onClick={() => prompt.reject(new WalletDeclined())}>Reject</button><button className="ok" onClick={prompt.resolve} autoFocus>Approve</button></div>
+      </div>
+      <div className="exthint">This is your wallet (simulated in demo mode). Approve to continue, or reject to see the declined state.</div>
+    </>
+  );
+}
+
 export function Modals() {
   const modal = useUI((s) => s.modal);
   const close = useUI((s) => s.close);
-  const locked = modal?.t === "tx" && modal.step === "pending";
+  const prompt = useUI((s) => s.prompt);
+  const locked = modal?.t === "connecting" || (modal?.t === "action" && !!prompt);
   return (
     <Dialog.Root open={!!modal} onOpenChange={(o) => !o && close()}>
       <Dialog.Portal>
         <Dialog.Overlay className="ovl">
-          <Dialog.Content
-            asChild
-            aria-describedby={undefined}
-            onPointerDownOutside={(e) => locked && e.preventDefault()}
-            onEscapeKeyDown={(e) => locked && e.preventDefault()}
-            onOpenAutoFocus={(e) => { if (!(e.currentTarget as HTMLElement)?.querySelector?.("input[autofocus]")) e.preventDefault(); }}
-          >
+          <Dialog.Content asChild aria-describedby={undefined} onPointerDownOutside={(e) => (locked || prompt) && e.preventDefault()} onEscapeKeyDown={(e) => locked && e.preventDefault()}
+            onOpenAutoFocus={(e) => { if (!(e.currentTarget as HTMLElement)?.querySelector?.("input[autofocus],textarea[autofocus]")) e.preventDefault(); }}>
             <div style={{ display: "contents" }}>
               {modal && <ModalBody md={modal} />}
-              {/* Simulated wallet popup lives inside the dialog so it stays interactive under the modal focus trap */}
-              {env.dataSource === "mock" && <ExtPopup />}
+              {env.dataSource === "mock" && <WalletPopup />}
             </div>
           </Dialog.Content>
         </Dialog.Overlay>
       </Dialog.Portal>
+      {/* Signatures outside a dialog (e.g. Enable USDC on the Wallet page) still get the demo wallet */}
+      {!modal && prompt && env.dataSource === "mock" && <div className="ovl ext-only"><WalletPopup /></div>}
     </Dialog.Root>
-  );
-}
-
-/** Simulated wallet extension popup (mock data source only) */
-export function ExtPopup() {
-  const ext = useUI((s) => s.ext);
-  const modal = useUI((s) => s.modal);
-  const me = useChain((s) => s.me);
-  const wallet = useChain((s) => s.wallet) ?? "Freighter";
-  const a = useChain((s) => (modal?.t === "tx" && modal.id ? s.agreements.find((x) => x.id === modal.id) : undefined));
-  const { walletApprove, walletReject } = useUI.getState();
-  if (!ext || modal?.t !== "tx" || !me) return null;
-  const info = txInfo(modal, a);
-  const p = getPerson(me);
-  return (
-    <>
-      <div className="ext" role="dialog" aria-label={`${wallet} signature request`}>
-        <div className="arrow" />
-        <div className="eh">
-          <img src={imgUrl(`wl-${wallet.toLowerCase()}`)} alt="" />
-          <div><b>{wallet}</b><small>{p.name} · {mid(p.addr)}</small></div>
-          <span className="net">Testnet</span>
-        </div>
-        <div className="eb">
-          <div className="site"><Icon name="lock" size={12} />milevault.app wants you to sign</div>
-          <h4>{info.ext}</h4>
-          <div className="fn">Contract call · <code>{info.fn}</code></div>
-          <KV rows={info.rows} />
-        </div>
-        <div className="ef">
-          <button className="rj" onClick={walletReject}>Reject</button>
-          <button className="ok" onClick={walletApprove} autoFocus>Approve</button>
-        </div>
-      </div>
-      <div className="exthint">This is your {wallet} extension (simulated). Approve to sign, or reject to see the declined state.</div>
-    </>
   );
 }
 
 export function RedirectWatcher() {
   const redirect = useUI((s) => s.redirect);
   const router = useRouter();
-  useEffect(() => {
-    if (redirect) { router.push(redirect); useUI.getState().go(null); }
-  }, [redirect, router]);
+  useEffect(() => { if (redirect) { router.push(redirect); useUI.getState().go(null); } }, [redirect, router]);
   return null;
 }

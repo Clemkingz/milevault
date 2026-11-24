@@ -1,0 +1,17 @@
+{
+  "name": "@milevault/api",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Typed client for the external MileVault backend (+ in-browser mock backend for demo mode)",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@milevault/tsconfig": "workspace:*",
+    "typescript": "^5.9.3"
+  }
+}

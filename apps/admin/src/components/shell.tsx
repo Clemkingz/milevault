@@ -2,47 +2,113 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import type { ReactNode } from "react";
+import { useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { ApiError, mockWallets, shortAddr } from "@milevault/api";
 import { Button, Icon, Logo, VaultLoader, useScrolled, type IconName } from "@milevault/ui";
+import { signIn, signOut, type SignInResult } from "@/lib/auth";
+import { api, mock } from "@/lib/backend";
 import { env } from "@/lib/env";
-import { signIn, signOut, useOperator } from "./session";
+import { useSession } from "@/lib/session";
+import { WALLETS, type WalletName } from "@/lib/wallet";
 
 const NAV: [string, string, IconName][] = [
   ["/overview", "Overview", "home"],
   ["/agreements", "Agreements", "file"],
-  ["/wallets", "Wallets", "user"],
   ["/transactions", "Transactions", "transfer"],
+  ["/wallets", "Wallets", "wallet"],
   ["/system", "System", "shield"],
 ];
 const on = (p: string, h: string) => p === h || p.startsWith(`${h}/`);
+const useMounted = () => useSyncExternalStore(() => () => {}, () => true, () => false);
 
-function Gate() {
+function Frame({ children, img = "w-01" }: { children: ReactNode; img?: string }) {
   return (
     <div className="lp dl sys">
       <div className="lnav dl"><Logo /><span className="adm-chip">Operator console</span></div>
       <div className="dlwrap">
         <div className="dlcard mv-page">
-          <div className="hmedia"><img className="sky" src="/admin/images/sky.webp" alt="" /><img className="hil" src="/admin/images/w-01.webp" alt="" /><span className="knot" /></div>
-          <span className="sys-code">Restricted</span>
-          <h3>Sign in to the operator console</h3>
-          <p>Monitor agreements, escrow and on-chain activity across MileVault. Access is limited to operator wallets approved by the backend.</p>
-          {env.dataSource === "mock"
-            ? <Button h={44} icon="key" iconSize={16} onClick={signIn}>Continue as demo operator</Button>
-            : <Button h={44} icon="key" iconSize={16} disabled>Operator sign-in (connect backend)</Button>}
-          <div className="note"><Icon name="lock" size={16} /><span>{env.dataSource === "mock" ? "Demo mode: sample data, no backend calls." : "Sign-in is handled by the external MileVault backend."}</span></div>
+          <div className="hmedia"><img className="sky" src="/admin/images/sky.webp" alt="" /><img className="hil" src={`/admin/images/${img}.webp`} alt="" /><span className="knot" /></div>
+          {children}
         </div>
       </div>
     </div>
   );
 }
 
+const MSG: Record<Exclude<SignInResult, "ok" | "error">, string> = {
+  declined: "You declined the sign-in request in your wallet. Nothing was signed.",
+  wrong_network: `Your wallet is on another network. Switch it to Stellar ${env.network === "mainnet" || env.network === "public" ? "Mainnet" : "Testnet"} and try again.`,
+};
+
+/** Sign in with an operator wallet (SEP-10). The backend decides who is an operator. */
+function Gate({ expired }: { expired: boolean }) {
+  const [busy, setBusy] = useState<string | null>(null);
+  const [warn, setWarn] = useState<string | null>(null);
+  const go = async (key: string, name: WalletName, demo?: string) => {
+    setBusy(key); setWarn(null);
+    const r = await signIn(name, demo);
+    setBusy(null);
+    if (r === "declined" || r === "wrong_network") setWarn(MSG[r]);
+  };
+  return (
+    <Frame>
+      <span className="sys-code">{expired ? "Session ended" : "Restricted"}</span>
+      <h3>{expired ? "Sign in again" : "Sign in to the operator console"}</h3>
+      <p>{expired ? "Your operator session expired. Sign the request in your wallet again to continue." : "Monitor agreements, escrow and on-chain activity across MileVault. Sign in with an operator wallet; the backend checks it against the admin allowlist."}</p>
+      {warn && <div className="warnbox"><Icon name="alert" size={16} /><span>{warn}</span></div>}
+      {mock ? (
+        <div className="adm-wallets">
+          <Button h={44} icon="key" iconSize={16} loading={busy === "op"} loadingText="Signing in…" disabled={!!busy} onClick={() => go("op", "Freighter", mockWallets[2]!.address)}>Sign in as demo operator</Button>
+          <Button h={40} variant="sec" loading={busy === "user"} loadingText="Signing in…" disabled={!!busy} onClick={() => go("user", "Freighter", mockWallets[0]!.address)}>Try a non-operator wallet</Button>
+        </div>
+      ) : (
+        <div className="adm-wallets grid">
+          {WALLETS.map((w) => (
+            <Button key={w.name} h={44} variant="sec" loading={busy === w.name} loadingText="Check your wallet…" disabled={!!busy} onClick={() => go(w.name, w.name)}>{w.name}</Button>
+          ))}
+        </div>
+      )}
+      <div className="note"><Icon name="lock" size={16} /><span>{mock ? "Demo mode: an in-browser mock backend, no network calls." : "Signing proves you own the wallet. It can’t move funds and is never sent to the network."}</span></div>
+    </Frame>
+  );
+}
+
+function NotAdmin({ address }: { address: string | null }) {
+  return (
+    <Frame img="w-05e">
+      <span className="sys-code">403 · Not an operator</span>
+      <h3>This wallet doesn’t have admin access</h3>
+      <p>{address ? shortAddr(address) : "This wallet"} signed in, but the backend didn’t recognise it as an operator. Sign in with an allowlisted wallet.</p>
+      <Button h={44} icon="exit" iconSize={16} onClick={() => void signOut()}>Use another wallet</Button>
+      <div className="flinks" style={{ justifyContent: "center" }}><a href="/app/dashboard">Open the MileVault app instead</a></div>
+    </Frame>
+  );
+}
+
 export function AdminShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  const { ready, operator } = useOperator();
+  const mounted = useMounted();
+  const { token, address, expired } = useSession();
   const top = useScrolled<HTMLDivElement>();
-  if (!ready) return <VaultLoader fullscreen label="Opening the operator console" />;
-  if (!operator) return <Gate />;
+  const me = useQuery({ queryKey: ["admin", "me", address], queryFn: api.admin.me, enabled: mounted && !!token, staleTime: 5 * 60_000, retry: false });
+  useEffect(() => { if (me.error instanceof ApiError && me.error.status === 401) useSession.getState().expire(); }, [me.error]);
+
+  if (!mounted) return <VaultLoader fullscreen label="Opening the operator console" />;
+  if (!token) return <Gate expired={expired} />;
+  if (me.isPending) return <VaultLoader fullscreen label="Checking operator access" />;
+  if (me.error instanceof ApiError && me.error.status === 403) return <NotAdmin address={address} />;
+  if (me.error) return (
+    <Frame img="w-05e">
+      <span className="sys-code">Backend unreachable</span>
+      <h3>Couldn’t check your access</h3>
+      <p>{me.error.message}</p>
+      <Button h={44} icon="refresh" iconSize={16} onClick={() => void me.refetch()}>Try again</Button>
+    </Frame>
+  );
+
   const title = NAV.find(([h]) => on(pathname, h))?.[1] ?? "Admin";
+  const short = shortAddr(address);
   return (
     <div className="app">
       <a href="#main" className="skip">Skip to content</a>
@@ -66,8 +132,8 @@ export function AdminShell({ children }: { children: ReactNode }) {
         <div className="bot">
           <div className="user" style={{ cursor: "default" }}>
             <span className="av" style={{ width: 36, height: 36, background: "#EAF8FE", color: "#1A9ACB" }}><Icon name="shield" size={18} /></span>
-            <div className="ut"><div className="nm">{operator.name}</div><div className="wl"><span className="gdot" /><span className="ad">{env.dataSource === "mock" ? "Demo data" : "Live"}</span></div></div>
-            <button className="chev" onClick={signOut} title="Sign out" aria-label="Sign out"><Icon name="exit" size={16} /></button>
+            <div className="ut"><div className="nm" title={address ?? ""}>{short}</div><div className="wl"><span className="gdot" /><span className="ad">{mock ? "Demo backend" : "Operator"}</span></div></div>
+            <button className="chev" onClick={() => void signOut()} title="Sign out" aria-label="Sign out"><Icon name="exit" size={16} /></button>
           </div>
           <div className="flinks"><a href="/app/dashboard">Open app</a><span>·</span><a href="/">Website</a></div>
         </div>
@@ -75,9 +141,9 @@ export function AdminShell({ children }: { children: ReactNode }) {
       <div className="main">
         <div className="mtop" ref={top}>
           <h2>{title}</h2>
-          <button className="wchip" onClick={signOut} aria-label="Sign out"><Icon name="exit" size={16} />Sign out</button>
+          <button className="wchip" onClick={() => void signOut()} aria-label="Sign out"><Icon name="exit" size={16} />{short}</button>
         </div>
-        <div className="scroll"><main id="main" className="col mv-page">{children}</main></div>
+        <div className="scroll"><main id="main" className="col mv-page" key={pathname}>{children}</main></div>
       </div>
       <nav className="tabbar adm-tabs" aria-label="Main">
         {NAV.map(([h, l, i]) => (

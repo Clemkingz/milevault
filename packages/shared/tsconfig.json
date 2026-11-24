@@ -1,4 +1,0 @@
-{
-  "extends": "@milevault/tsconfig/base.json",
-  "include": ["src"]
-}

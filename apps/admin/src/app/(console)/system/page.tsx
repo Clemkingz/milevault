@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { SystemStatus } from "./status";
+import { SystemView } from "./view";
 
 export const metadata: Metadata = { title: "System" };
-export default function Page() { return <SystemStatus />; }
+export default function Page() { return <SystemView />; }

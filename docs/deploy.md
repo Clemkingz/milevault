@@ -28,16 +28,20 @@ of these services started calling another from server code.
 | Variable | Needed for | Notes |
 |---|---|---|
 | `NEXT_PUBLIC_SITE_URL` | all | Public domain, e.g. `https://milevault.app`. Falls back to the Vercel URL |
-| `NEXT_PUBLIC_DATA_SOURCE` | app, admin | `mock` (default) until the backend is ready, then `live` |
-| `NEXT_PUBLIC_API_URL` | app, admin | External backend base URL (`live` only). The backend must allow CORS from the site domain |
-| `NEXT_PUBLIC_ESCROW_CONTRACT_ID`, … | app, admin | Stellar settings for `live` |
+| `NEXT_PUBLIC_DATA_SOURCE` | app, admin | `mock` (default, in-browser demo backend) or `live` |
+| `NEXT_PUBLIC_API_URL` | app, admin | Backend URL, with or without `/api/v1`. Required for `live` |
+| `NEXT_PUBLIC_STELLAR_NETWORK` | app, admin | `testnet` (default) |
+
+**CORS:** the backend must allow the site's origin (its `FRONTEND_URL` / `CORS_ORIGINS` setting).
+It currently allows `localhost` only, so a Vercel deployment in `live` mode gets CORS errors until
+the production domain (and preview domains, if wanted) is added there.
 
 ## Admin access
 
-In demo mode the console offers **Continue as demo operator**. For production, operator sign-in must
-be enforced by the backend (for example, a wallet signature checked against an allowlist). The admin UI
-gates on that session. The `/admin` path is public on Vercel, so **access control must not rely on
-the URL being hidden**. Optionally add Vercel Deployment Protection or Firewall rules on `/admin`.
+The console signs in with the same wallet flow as the dashboard, then calls `GET /admin/me`:
+`200` opens the console, `403 NOT_ADMIN` shows "This wallet does not have admin access". The
+allowlist is the backend's `ADMIN_WALLETS`. `/admin` is public on Vercel, so access control is the
+backend's job; optionally add Vercel Deployment Protection or Firewall rules on `/admin` too.
 
 ## Local development
 

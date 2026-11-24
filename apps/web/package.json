@@ -10,7 +10,6 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@milevault/shared": "workspace:*",
     "@milevault/ui": "workspace:*",
     "next": "^16.4.6",
     "react": "^19.3.1",

@@ -58,7 +58,7 @@ export function LandingFooter() {
         <div className="brand"><Logo />Milestone escrow for contributors and clients, on Stellar.</div>
         <div className="cols">
           <div><b>Product</b>{NAV.map(([h, l]) => <a key={h} href={`/${h}`}>{l}</a>)}</div>
-          <div><b>Developers</b><a href="https://stellar.expert/explorer/testnet" target="_blank" rel="noopener">Soroban contract</a><a href="https://stellar.expert/explorer/testnet" target="_blank" rel="noopener">Stellar explorer</a><a href={FAUCET} target="_blank" rel="noopener">Testnet faucet</a></div>
+          <div><b>Developers</b><a href="https://stellar.expert/explorer/testnet" target="_blank" rel="noopener">Stellar explorer</a><a href={FAUCET} target="_blank" rel="noopener">Testnet faucet</a></div>
           <div><b>Legal</b><a href="/privacy">Privacy</a><a href="/terms">Terms</a></div>
         </div>
       </div>

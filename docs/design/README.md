@@ -17,7 +17,7 @@ are already applied in code — see `packages/ui/src/theme.css`.
 | 3. Escrow funding (balance, authorisation, confirmation, tx ref) | Fund dialog with balance, insufficient-balance warning, wallet signature, pending, done | ✅ Covered |
 | 4. Milestone management (submit / approve / release / remaining) | "Next action" card per role; approve and release kept separate | ✅ Covered |
 | 5. Details & history (ID, parties, hashes, explorer, refund state) | Agreement page tabs: Overview, Milestones, Activity; Transactions page | ✅ Covered |
-| Cancellation / refund interface | Cancel only for **unfunded** agreements; contributor **Decline** refunds a funded one | ✅ Mutual cancellation **built in code** in the design's style (request → other party confirms or requester withdraws), using the unused C-04 / C-07 illustrations. Still needs a designer pass. |
+| Cancellation / refund interface | Cancel only for **unfunded** agreements; contributor **Decline** refunds a funded one | ✅ Mutual cancellation **built in code** in the design's style (propose → other party confirms or rejects, or the proposer withdraws), plus **Recover** after the recovery date, using the unused C-04 / C-07 illustrations. Still needs a designer pass. |
 
 ## Designer deliverable states (PRD §A)
 
@@ -27,33 +27,36 @@ are already applied in code — see `packages/ui/src/theme.css`.
 | Success | ✅ (created, funded, released, toasts) |
 | Wallet disconnected | ✅ (landing, invite link, disconnect confirm) |
 | User rejects in wallet | ✅ ("You declined in Freighter", "Connection declined") |
-| **Transaction failed on-chain** (contract error, network/RPC error) | ✅ Built in code: "Transaction failed" dialog (W-05E, sunset sky), retry. Needs a designer pass. |
+| **Transaction failed on-chain** (`status: "failed"` with `failure`, expired, or still pending) | ✅ Built in code: "Transaction didn’t go through" (W-05E) with the API’s reason and a fix-it action, plus a "Still confirming" state with no retry. Needs a designer pass. |
 | **Loading** (data fetching) | ✅ Built in code: shimmer skeletons shaped like each screen. |
 | Wrong network (wallet on Mainnet) | ✅ Built in code: "Switch to Testnet" dialog (W-08). |
 | 404 / error pages | ✅ Built in code: "Nothing in this vault" (E-01) and error page (W-05E). |
 
 ## New in the design (not in the PRD), now in code
 
-- **Contributor accept / decline** of a funded agreement. Implemented in the contract (`accept`, `decline`) and status model (`Funded → Active`, `Declined`).
+- **Contributor accept / decline** of a funded agreement. Accept is an API call; decline is a signed on-chain action that refunds the client.
 - **Invite deep link** `milevault.app/a/MV-1042`. Implemented at `apps/app/src/app/a/[ref]`, and the landing page rewrites `/a/*` to it.
-- Agreement refs shown as `MV-<id>`. Implemented with `agreementRef()` in `@milevault/shared`.
-- Submission link on submit (`https://…`). Stored off-chain by the external backend.
+- Agreement refs shown as `MV-<id>`, exactly as the API returns them.
+- Submission link on submit. The API requires the full `https://…` link (the prototype accepted bare domains).
 
-## Backend gaps the design implies (external backend)
+## Differences from the prototype (from the API guide, now in code)
 
-| Design element | Gap |
+| Prototype | Now |
 |---|---|
-| Party names + avatars ("Aryan Roy", "Kay Finley") | No profile/name data in the PRD or API. Today the UI shows short addresses. Needs a decision: add optional display names to the API, or keep addresses only. |
-| "Only the client and contributor wallets can open this agreement" | API reads are public by wallet address. This needs wallet-signature auth (SEP-10 / signed message) on the API. |
-| Transactions: search by name or address, Export CSV | Working in the UI against mock data (search by name/address/hash, CSV export). Needs API endpoints for live data. |
-| "We'll let you know when…" | No notification channel in the PRD (toasts only while the app is open). |
-| Wallet page: USDC / XLM balances, "Locked as client / for you" | Shown from mock balances today; live version reads the token contract + Horizon, not the API. |
+| Soroban contract wording, "Escrow contract C…E2M" row | Stellar escrow (claimable balances); details show the reference, asset, arbiter and funding transaction |
+| Wallet popup on create / accept / submit | Plain API calls; only fund, approve, release, decline, cancellation and recover are signed |
+| Names and photos ("Aryan Roy", "Kay Finley") | Short addresses and generated avatars (the API has no profiles) |
+| No way to reject work | **Request changes** with a required note, shown to the contributor |
+| Share page shows the agreement before connecting | "Connect to view this agreement"; non-parties see "This wallet isn't part of this agreement" |
+| No recovery | Recovery date, a warning when it's close, and a client **Recover** action after it |
+| Single asset implied | Asset comes from `/escrow/config` and is shown with its issuer. Choosing an asset per agreement needs an API change (the API rejects an `asset` field today) |
 
 ## Additions beyond the prototype (need a designer pass)
 
 - **Sidebar**: logo top, "New agreement" action, grouped nav (Workspace / Account), account chip at the bottom; icon rail on small laptops.
 - **Install card** replaces "Available on iOS" — the app is a PWA (native install prompt, iOS/Safari instructions dialog with W-08).
-- **Profile & settings** screen (name, photo upload with square crop, preferences, wallet session).
+- **Settings** screen (preferences and wallet session; no profiles, since the API has none).
+- **Notifications** page and bell (`/notifications`), **Wallet** readiness actions (Friendbot, Enable USDC, test USDC).
 - **Branded loader** (vault mark + drawing ring), stacked toasts with tones and countdown, error screen with reference code, 404 with MV-number lookup, offline screen.
 
 ## Layout beyond the prototype

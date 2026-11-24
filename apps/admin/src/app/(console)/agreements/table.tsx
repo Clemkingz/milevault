@@ -1,54 +1,49 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { Icon, StatusBadge, type BadgeKind } from "@milevault/ui";
-import { Avatar, Empty, PageHeader } from "@/components/bits";
-import { AGREEMENTS, wallet } from "@/lib/data";
-import { relTime, usd } from "@/lib/format";
-
-const TAGS: [string, string, (s: BadgeKind) => boolean][] = [
-  ["all", "All", () => true],
-  ["open", "Open", (s) => ["awaiting", "funded", "progress"].includes(s)],
-  ["attention", "Cancel pending", (s) => s === "cancel_requested"],
-  ["done", "Completed", (s) => s === "completed"],
-  ["closed", "Cancelled / declined", (s) => s === "cancelled" || s === "declined"],
-];
+import Link from "next/link";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { money, relTime, shortAddr, type AgreementStatus } from "@milevault/api";
+import { Icon, StatusBadge } from "@milevault/ui";
+import { Empty, ErrorState, PageHeader, Pager, Rows } from "@/components/bits";
+import { api } from "@/lib/backend";
+import { AGREEMENT_STATUSES, agreementBadge, human } from "@/lib/badge";
+import { PAGE_SIZE, useListParams } from "@/lib/use-list";
 
 export function AgreementsTable() {
-  const [tag, setTag] = useState("all");
-  const [q, setQ] = useState("");
-  const fn = TAGS.find((t) => t[0] === tag)![2];
-  const items = useMemo(() => {
-    const s = q.trim().toLowerCase();
-    return AGREEMENTS.filter((a) => fn(a.status)).filter((a) =>
-      !s || a.name.toLowerCase().includes(s) || `mv-${a.id}`.includes(s) || [a.client, a.contributor].some((x) => x.toLowerCase().includes(s) || wallet(x).name.toLowerCase().includes(s)));
-  }, [fn, q]);
+  const { filters, search, q, setQ, page, set, offset } = useListParams(["status"]);
+  const list = useQuery({
+    queryKey: ["admin", "agreements", filters.status, search, page],
+    queryFn: () => api.admin.agreements({ status: (filters.status || undefined) as AgreementStatus | undefined, search: search || undefined, limit: PAGE_SIZE, offset }),
+    placeholderData: keepPreviousData,
+  });
   return (
     <>
       <PageHeader title="Agreements" sub="Every escrow agreement on the platform, with its locked and released funds." />
       <div className="toolbar">
-        <label className="search"><Icon name="search" size={16} /><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search name, MV number, wallet or address" aria-label="Search agreements" /></label>
+        <label className="search"><Icon name="search" size={16} /><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search name, MV number or address" aria-label="Search agreements" /></label>
       </div>
-      <div className="filters" role="tablist">
-        {TAGS.map(([k, l, f]) => (
-          <button key={k} role="tab" aria-selected={tag === k} className={`tag${tag === k ? " on" : ""}`} onClick={() => setTag(k)}><b>{l}</b><small>{AGREEMENTS.filter((a) => f(a.status)).length}</small></button>
+      <div className="filters" role="tablist" aria-label="Status">
+        {["", ...AGREEMENT_STATUSES].map((s) => (
+          <button key={s || "all"} role="tab" aria-selected={filters.status === s} className={`tag${filters.status === s ? " on" : ""}`} onClick={() => set({ status: s || null })}><b>{s ? human(s) : "All"}</b></button>
         ))}
       </div>
-      {items.length ? (
-        <div className="card mv-list" key={tag}>
-          {items.map((a) => {
-            const c = wallet(a.client), k = wallet(a.contributor);
-            return (
-              <div className="trow" key={a.id}>
-                <div className="tx"><b>{a.name}</b><small>MV-{a.id} · {a.paid}/{a.milestones} paid · created {relTime(a.createdAt)}</small></div>
-                <div className="pairs hide-m" title={`${c.name} → ${k.name}`}><Avatar w={c} size={24} /><Icon name="right" size={14} color="#A3A3A3" /><Avatar w={k} size={24} /></div>
-                <span className="num">{usd(a.total)}<small>{a.locked ? `${usd(a.locked)} locked` : a.status === "completed" ? "Paid in full" : "Nothing locked"}</small></span>
-                <div className="col-w"><StatusBadge status={a.status} /></div>
-              </div>
-            );
-          })}
-        </div>
-      ) : <Empty title="No agreements match" body="Try another filter or search term." />}
+      {list.isPending ? <Rows /> : list.error ? <ErrorState error={list.error} retry={() => void list.refetch()} /> : list.data.result.length === 0 ? (
+        <Empty title="No agreements match" body="Try another status or search term." />
+      ) : (
+        <>
+          <div className={`card mv-list${list.isPlaceholderData ? " dim" : ""}`}>
+            {list.data.result.map((a) => (
+              <Link className="trow" key={a.reference} href={`/agreements/${a.reference}`}>
+                <div className="tx"><b>{a.name}</b><small>{a.reference} · {a.paidCount}/{a.milestoneCount} paid · created {relTime(a.createdAt)}</small></div>
+                <div className="pairs hide-m" title={`${a.client.address} → ${a.contributor?.address ?? "no contributor yet"}`}><span className="meta">{shortAddr(a.client.address)}</span><Icon name="right" size={14} color="#A3A3A3" /><span className="meta">{a.contributor ? shortAddr(a.contributor.address) : "—"}</span></div>
+                <span className="num">{money(a.total, a.asset)}<small>{Number(a.locked) > 0 ? `${money(a.locked, a.asset)} locked` : a.status === "completed" ? "Paid in full" : "Nothing locked"}</small></span>
+                <div className="col-w"><StatusBadge status={agreementBadge(a)} /></div>
+              </Link>
+            ))}
+          </div>
+          <Pager meta={list.data.paginationMeta} page={page} onPage={(p) => set({ page: p })} />
+        </>
+      )}
     </>
   );
 }

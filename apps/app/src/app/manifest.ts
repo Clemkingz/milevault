@@ -6,7 +6,7 @@ export default function manifest(): MetadataRoute.Manifest {
     id: "/app/",
     name: "MileVault — Milestone escrow",
     short_name: "MileVault",
-    description: "Fund agreements, approve milestones and release payments from a Soroban escrow on Stellar.",
+    description: "Fund agreements, approve milestones and release payments from escrow on Stellar.",
     start_url: "/app/dashboard?source=pwa",
     scope: "/app/",
     display: "standalone",
