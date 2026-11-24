@@ -61,8 +61,8 @@ function Gate({ expired }: { expired: boolean }) {
       {warn && <div className="warnbox"><Icon name="alert" size={16} /><span>{warn}</span></div>}
       {mock ? (
         <div className="adm-wallets">
-          <Button h={44} icon="key" iconSize={16} loading={busy === "op"} loadingText="Signing in…" disabled={!!busy} onClick={() => go("op", "Freighter", mockWallets[2]!.address)}>Sign in as demo operator</Button>
-          <Button h={40} variant="sec" loading={busy === "user"} loadingText="Signing in…" disabled={!!busy} onClick={() => go("user", "Freighter", mockWallets[0]!.address)}>Try a non-operator wallet</Button>
+          <Button h={44} icon="key" iconSize={16} loading={busy === "op"} loadingText="Signing in…" disabled={!!busy} onClick={() => go("op", "Varial", mockWallets[2]!.address)}>Sign in as demo operator</Button>
+          <Button h={40} variant="sec" loading={busy === "user"} loadingText="Signing in…" disabled={!!busy} onClick={() => go("user", "Varial", mockWallets[0]!.address)}>Try a non-operator wallet</Button>
         </div>
       ) : (
         <div className="adm-wallets">
@@ -70,7 +70,7 @@ function Gate({ expired }: { expired: boolean }) {
             : choices.list.map(({ option: o, available, note }) => (
               <Button key={o.name} h={44} className="adm-wbtn" variant={available ? "sec" : "ghost"} loading={busy === o.name} loadingText="Check your wallet…" disabled={!!busy}
                 onClick={() => (available ? go(o.name, o.name) : o.install && window.open(o.install, "_blank", "noopener"))}>
-                <span className="adm-wopt"><b>{walletLabel(o.name, choices.mobile)}</b><small className={available ? (note === "Detected" ? "ok" : "") : "no"}>{available ? note : "Not installed · Install"}</small></span>
+                <span className="adm-wopt"><b>{walletLabel(o.name, choices.mobile)}</b><small className={available ? (note.startsWith("Detected") ? "ok" : "") : "no"}>{available ? note : "Not installed · Install"}</small></span>
               </Button>
             ))}
           {choices?.footnote && <div className="adm-wfoot">{choices.footnote}</div>}

@@ -10,15 +10,20 @@ export class WalletMismatch extends Error { constructor(public active: string) {
 /** A browser-extension wallet that isn't installed in this browser */
 export class WalletNotInstalled extends Error { constructor(public wallet: string, public install?: string) { super(`${wallet} isn’t installed in this browser.`); } }
 
-export type WalletName = "Freighter" | "Freighter Mobile" | "xBull" | "Albedo" | "LOBSTR" | "Hana" | "WalletConnect";
+export type WalletName = "Varial" | "xBull" | "Albedo" | "LOBSTR" | "Hana" | "WalletConnect";
 type Kind = "extension" | "web" | "app" | "qr";
-export interface WalletOption { name: WalletName; module: string; kind: Kind; icon: string; install?: string; deepLink?: string }
+export interface WalletOption { name: WalletName; module: string; kind: Kind; icon: string; install?: string; deepLink?: string;
+  /** How to reach this wallet on a phone (its app), when that differs from desktop (its extension) */
+  mobile?: { module: string; kind: Kind; deepLink: string } }
 
-/** Every wallet MileVault can use. "varial" is the kit's id for Freighter (renamed Varial). */
+/** Every wallet MileVault can use. Varial (formerly Freighter) is one entry with two transports. */
 const OPTIONS: Record<WalletName, WalletOption> = {
-  Freighter: { name: "Freighter", module: "varial", kind: "extension", icon: "wl-freighter", install: "https://www.freighter.app/" },
-  // Freighter's phone app, over WalletConnect. Deep link from the Reown registry (AppKit's format).
-  "Freighter Mobile": { name: "Freighter Mobile", module: "wallet_connect", kind: "app", icon: "wl-freighter", deepLink: "freighterwallet://wc-redirect", install: "https://www.freighter.app/" },
+  Varial: {
+    name: "Varial", module: "varial", kind: "extension", icon: "wl-freighter", install: "https://varialwallet.com",
+    // On a phone (or inside Varial's in-app browser) the extension can't exist: use the app over
+    // WalletConnect. Deep link from the Reown registry, in AppKit's format.
+    mobile: { module: "wallet_connect", kind: "app", deepLink: "freighterwallet://wc-redirect" },
+  },
   xBull: { name: "xBull", module: "xbull", kind: "web", icon: "wl-xbull" },
   Albedo: { name: "Albedo", module: "albedo", kind: "web", icon: "wl-albedo" },
   LOBSTR: { name: "LOBSTR", module: "lobstr", kind: "extension", icon: "wl-lobstr", install: "https://lobstr.co/signer-extension/" },
@@ -27,12 +32,19 @@ const OPTIONS: Record<WalletName, WalletOption> = {
 };
 /** Kept for callers that list names (demo mode, admin parity) */
 export const WALLETS = Object.values(OPTIONS);
-export const walletIcon = (name?: string | null) => OPTIONS[name as WalletName]?.icon ?? "wl-freighter";
-export const walletKind = (name?: string | null): Kind => OPTIONS[name as WalletName]?.kind ?? "extension";
+/** Older sessions stored "Freighter"; treat it as Varial */
+const optionOf = (name?: string | null) => OPTIONS[(name === "Freighter" || name === "Freighter Mobile" ? "Varial" : name) as WalletName] ?? OPTIONS.Varial;
+/** The transport this wallet uses on this device: Varial is the extension on desktop, the app on a phone */
+export function resolve(name?: string | null): WalletOption {
+  const o = optionOf(name); const d = device();
+  return o.mobile && (d.mobile || d.inFreighterApp) && env.walletConnectProjectId ? { ...o, ...o.mobile } : o;
+}
+export const walletIcon = (name?: string | null) => optionOf(name).icon;
+export const walletKind = (name?: string | null): Kind => resolve(name).kind;
 /** How a wallet is named in the picker */
 export const walletLabel = (name: WalletName, mobile: boolean) =>
-  name === "Freighter Mobile" ? "Freighter app" : name === "WalletConnect" ? (mobile ? "Other wallet app" : "Phone wallet (QR code)") : name;
-const isWc = (name: WalletName) => OPTIONS[name].module === "wallet_connect";
+  name === "WalletConnect" ? (mobile ? "Other wallet app" : "Phone wallet (QR code)") : name;
+const isWc = (name: WalletName) => resolve(name).module === "wallet_connect";
 
 const MAINNET = env.network === "mainnet" || env.network === "public";
 /** Reown registry ids of Stellar wallets that speak WalletConnect (LOBSTR's app is Mainnet-only) */
@@ -57,15 +69,15 @@ export async function walletChoices(): Promise<{ mobile: boolean; list: WalletCh
   const { mobile, inFreighterApp } = device();
   const wc = !!env.walletConnectProjectId;
   const avail = mock ? async () => true : async (name: WalletName) => {
-    const mod = (await kit(), mods[OPTIONS[name].module]);
+    const mod = (await kit(), mods[resolve(name).module]);
     return mod ? Promise.race([mod.isAvailable().catch(() => false), new Promise<boolean>((r) => setTimeout(() => r(false), 2500))]) : false;
   };
   const pick = (name: WalletName, available: boolean, note: string): WalletChoice => ({ option: OPTIONS[name], available, note });
   if (mobile) {
-    if (inFreighterApp && wc) return { mobile, list: [pick("Freighter Mobile", true, "You’re in the Freighter app")] };
+    if (inFreighterApp && wc) return { mobile, list: [pick("Varial", true, "You’re in the Varial app")] };
     const hana = await avail("Hana"); // Hana's in-app browser injects its wallet
     const list = [
-      ...(wc ? [pick("Freighter Mobile", true, "Opens the Freighter app")] : []),
+      ...(wc ? [pick("Varial", true, "Opens the Varial app · formerly Freighter")] : []),
       ...(hana && !mock ? [pick("Hana", true, "Detected in this browser")] : []),
       pick("Albedo", true, "Web wallet · works in this browser"),
       pick("xBull", true, "Web wallet · works in this browser"),
@@ -74,14 +86,14 @@ export async function walletChoices(): Promise<{ mobile: boolean; list: WalletCh
     const footnote = !wc ? "Wallet apps need WalletConnect, which isn’t set up for this site." : !MAINNET ? "LOBSTR’s app connects on Mainnet only, so it can’t be used on Testnet." : undefined;
     return { mobile, list, footnote };
   }
-  const [fr, lo, ha] = await Promise.all([avail("Freighter"), avail("LOBSTR"), avail("Hana")]);
-  const ext = [pick("Freighter", fr, fr ? "Detected" : "Not installed"), pick("LOBSTR", lo, lo ? "Detected" : "Not installed"), pick("Hana", ha, ha ? "Detected" : "Not installed")];
+  const [fr, lo, ha] = await Promise.all([avail("Varial"), avail("LOBSTR"), avail("Hana")]);
+  const ext = [pick("Varial", fr, fr ? "Detected · browser extension" : "Not installed · formerly Freighter"), pick("LOBSTR", lo, lo ? "Detected" : "Not installed"), pick("Hana", ha, ha ? "Detected" : "Not installed")];
   const list = [
     ...ext.filter((x) => x.available),
     pick("xBull", true, "Extension or web wallet"),
     pick("Albedo", true, "Web wallet · no install"),
     ...ext.filter((x) => !x.available),
-    ...(wc ? [pick("WalletConnect", true, "Scan with Freighter Mobile on your phone")] : []),
+    ...(wc ? [pick("WalletConnect", true, "Scan with the Varial app on your phone")] : []),
   ];
   return { mobile, list };
 }
@@ -90,7 +102,7 @@ export async function walletChoices(): Promise<{ mobile: boolean; list: WalletCh
 type KitModule = { isAvailable: () => Promise<boolean> };
 const mods: Record<string, KitModule> = {};
 let kitReady: Promise<typeof import("@creit.tech/stellar-wallets-kit")> | null = null;
-/** Set right before connecting "Freighter Mobile": the next WalletConnect URI opens that app */
+/** Set right before connecting Varial on a phone: the next WalletConnect URI opens the Varial app */
 let deepLinkNext: string | null = null;
 /** AppKit's native-link format: `scheme://path/wc?uri=…` */
 const appLink = (app: string, uri?: string) => {
@@ -151,7 +163,7 @@ export const wallet = {
   async connect(name: WalletName, demoAddress?: string): Promise<{ address: string; networkPassphrase: string | null }> {
     if (mock) return { address: demoAddress!, networkPassphrase: null };
     const m = await kit();
-    const opt = OPTIONS[name];
+    const opt = resolve(name);
     if (opt.kind === "extension" && !(await mods[opt.module]?.isAvailable().catch(() => false)))
       throw new WalletNotInstalled(name, opt.install);
     try {
@@ -166,7 +178,7 @@ export const wallet = {
   async sign(xdr: string, opts: { networkPassphrase: string; address: string; purpose: "signin" | "action"; title?: string; rows?: [string, string][]; fn?: string; wallet?: string }): Promise<string> {
     if (mock) return mock.sign(xdr);
     const m = await kit();
-    const name = (opts.wallet ?? useSession.getState().walletId ?? "Freighter") as WalletName, opt = OPTIONS[name] ?? OPTIONS.Freighter;
+    const name = (opts.wallet ?? useSession.getState().walletId ?? "Varial") as WalletName, opt = resolve(name);
     m.StellarWalletsKit.setWallet(opt.module);
     if (isWc(name)) await wcReady();
     // Only extensions can report their active account silently; asking WalletConnect or a web

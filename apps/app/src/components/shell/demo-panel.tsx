@@ -74,7 +74,7 @@ export function DemoPanel() {
     if (address === me) return;
     setDemo(address);
     if (me) await signOut({ silent: true });
-    void signIn("Freighter");
+    void signIn("Varial");
   };
   const upd = (p: Partial<typeof settings>) => { mock?.setSettings(p); setSettings({ ...settings, ...p }); };
 

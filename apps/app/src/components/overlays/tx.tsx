@@ -27,7 +27,7 @@ export function ActionDialog({ refId, kind, position }: { refId: string; kind: A
   const qc = useQueryClient();
   const { data: a } = useAgreement(refId);
   const me = useSession((s) => s.address)!;
-  const walletName = useSession((s) => s.walletId) ?? "Freighter";
+  const walletName = useSession((s) => s.walletId) ?? "Varial";
   const { data: w } = useWalletOverview();
   const close = useUI((s) => s.close);
   const toast = useUI((s) => s.toast);

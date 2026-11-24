@@ -55,7 +55,7 @@ function WalletPicker({ sw }: { sw?: boolean }) {
         {!state ? [0, 1, 2].map((i) => <div key={i} className="wopt sk-row"><span className="sk" style={{ width: 40, height: 40, borderRadius: 8 }} /><span className="tx"><span className="sk" style={{ width: 110, height: 14 }} /><span className="sk" style={{ width: 160, height: 12, marginTop: 6 }} /></span></div>)
           : state.list.map(({ option: o, available, note }, i) => (
             <WalletRow key={o.name} name={o.name} label={walletLabel(o.name, mobile)} muted={!available}
-              sub={<span className="wsub"><span className={`wstat${available ? (note === "Detected" || note.startsWith("You’re") ? " ok" : "") : " no"}`}>{note}</span>{i === 0 && available && (o.name === "Freighter" || o.name === "Freighter Mobile") && <span className="rec">Recommended</span>}</span>}
+              sub={<span className="wsub"><span className={`wstat${available ? (note.startsWith("Detected") || note.startsWith("You’re") ? " ok" : "") : " no"}`}>{note}</span>{i === 0 && available && o.name === "Varial" && <span className="rec">Recommended</span>}</span>}
               right={available ? <Icon name="right" size={20} /> : <span className="winst">Install<Icon name="external" size={14} /></span>}
               onClick={() => (available ? void signIn(o.name) : o.install && window.open(o.install, "_blank", "noopener"))} />
           ))}
@@ -77,10 +77,10 @@ function ModalBody({ md }: { md: Modal }) {
       <HeroDlg k={md.step === "address" ? "W-02" : "T-02"} className="waiting">
         <Head title={md.step === "address" ? `Waiting for ${md.wallet}` : "Sign in to MileVault"}>
           {md.step === "address"
-            ? walletKind(md.wallet) === "app" ? "Approve the connection in the Freighter app, then come back to this page. MileVault only asks for your public address."
-            : walletKind(md.wallet) === "qr" ? (device().mobile ? "Choose your wallet app and approve the connection, then come back to this page." : "Scan the QR code with Freighter Mobile (or another Stellar wallet app) and approve the connection.")
+            ? walletKind(md.wallet) === "app" ? "Approve the connection in the Varial app, then come back to this page. MileVault only asks for your public address."
+            : walletKind(md.wallet) === "qr" ? (device().mobile ? "Choose your wallet app and approve the connection, then come back to this page." : "Scan the QR code with the Varial app (or another Stellar wallet app) and approve the connection.")
             : `Approve the connection request in ${md.wallet}. MileVault only asks for your public address.`
-            : `Approve the sign-in message in ${walletKind(md.wallet) === "app" ? "the Freighter app" : md.wallet}. It proves this wallet is yours; it can’t move funds and is never sent to the network.`}
+            : `Approve the sign-in message in ${walletKind(md.wallet) === "app" ? "the Varial app" : md.wallet}. It proves this wallet is yours; it can’t move funds and is never sent to the network.`}
         </Head>
         <WalletRow name={md.wallet} sub={<small>{md.step === "address" ? "Waiting for approval…" : "Waiting for your signature…"}</small>} right={<Icon name="loading" size={20} color="#2EBEF2" className="spin" />} active />
         <Foot><FB onClick={() => ui.open({ t: "connect" })}>Choose another wallet</FB></Foot>
@@ -115,7 +115,7 @@ function ModalBody({ md }: { md: Modal }) {
 /** Simulated wallet popup — demo mode only (real wallets show their own UI) */
 function WalletPopup() {
   const prompt = useUI((s) => s.prompt);
-  const wallet = useSession((s) => s.walletId) ?? (prompt?.wallet ?? "Freighter");
+  const wallet = useSession((s) => s.walletId) ?? (prompt?.wallet ?? "Varial");
   if (!prompt) return null;
   const name = prompt.wallet ?? wallet;
   return (
